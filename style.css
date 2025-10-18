@@ -1,0 +1,29 @@
+h1{
+    text-align: center;
+}
+
+#add-item-form table{
+    align-items: center;
+    width: 70vw;
+    margin: auto;
+    border-collapse: collapse;
+}
+
+#add-item-form tr td{
+    border: 1px black solid;
+    text-align: center;
+    padding: 5px;
+}
+
+#add-item-form input{
+    width:100%;
+}
+
+#add-item-button-div{
+    width: 70vw;
+    margin: auto;
+}
+
+#add-item-button-text{
+    margin:2px;
+}
