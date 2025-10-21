@@ -2,6 +2,7 @@ target/
 !.mvn/wrapper/maven-wrapper.jar
 !**/src/main/**/target/
 !**/src/test/**/target/
+backend/src/main/resources/config.properties
 
 ### IntelliJ IDEA ###
 .idea/modules.xml
@@ -10,6 +11,7 @@ target/
 .idea/libraries/
 .idea/misc.xml
 .idea/workspace.xml
+.idea/
 *.iws
 *.iml
 *.ipr
