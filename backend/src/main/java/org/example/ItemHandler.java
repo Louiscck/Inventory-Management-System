@@ -28,9 +28,6 @@ public class ItemHandler implements HttpHandler {
             String path = exchange.getRequestURI().getPath();
             String[] paths = path.split("/");
             System.out.println("Received HTTP request: " + method);
-            for (String p : paths) {
-                System.out.println("part = " + p);
-            }
             switch (method) {
                 case "OPTIONS":
                     handleCors(exchange);
