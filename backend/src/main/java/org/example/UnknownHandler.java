@@ -10,7 +10,6 @@ import java.io.OutputStream;
 public class UnknownHandler implements HttpHandler {
     @Override
     public void handle(HttpExchange exchange) throws IOException {
-        System.out.println(exchange.getRequestMethod());
         if(exchange.getRequestMethod().equalsIgnoreCase("OPTIONS")){
             handleCors(exchange);
         } else {

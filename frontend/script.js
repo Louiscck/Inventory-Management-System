@@ -1,4 +1,7 @@
 document.getElementById("add-item-button").addEventListener("click", addItem);
+document.getElementById("amount-input").addEventListener("input", function(){
+    this.value = Math.max(0,this.value);
+});
 
 async function addItem(event){
     const form = document.getElementById("add-item-form");
