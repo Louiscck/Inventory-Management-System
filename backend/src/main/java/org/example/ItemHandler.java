@@ -130,7 +130,7 @@ public class ItemHandler implements HttpHandler {
             String[] requiredField = {"name", "category", "specification", "unit", "amount"};
 
             for(String field: requiredField){
-                if(!jsonNode.hasNonNull(field) || jsonNode.get(field).asText().isEmpty()){
+                if(!jsonNode.hasNonNull(field) || jsonNode.get(field).asText().trim().isEmpty()){
                     errorResponse.setStatusCode(400);
                     errorResponse.setErrorMessage("Missing fields. Please fill up the form.");
                     return true;
@@ -143,7 +143,7 @@ public class ItemHandler implements HttpHandler {
                 if(amountNode.isNumber()){
                     amount = amountNode.asInt();
                 } else if (amountNode.isTextual()){
-                    amount = Integer.parseInt(amountNode.asText());
+                    amount = Integer.parseInt(amountNode.asText().trim());
                 } else {
                     throw new NumberFormatException();
                 }
@@ -165,6 +165,7 @@ public class ItemHandler implements HttpHandler {
     }
 
     private void getItem(HttpExchange exchange, String keyword) throws Exception{
+        keyword = keyword.trim();
         ArrayList<Item> itemList = this.database.readFromDB(keyword, Item.class);
         sendResponse(exchange,200, itemList);
     }

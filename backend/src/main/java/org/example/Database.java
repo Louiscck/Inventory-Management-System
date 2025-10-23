@@ -45,7 +45,11 @@ public class Database {
                 if (field.isAnnotationPresent(PrimaryKey.class)) {
                     fieldValue.add(null); //primary key are auto incremented in database
                 } else {
-                    fieldValue.add(field.get(object));
+                    if(field.getType() == String.class){
+                        fieldValue.add(field.get(object).toString().trim());
+                    } else {
+                        fieldValue.add(field.get(object));
+                    }
                 }
             }
         }
