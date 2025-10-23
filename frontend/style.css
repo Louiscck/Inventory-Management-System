@@ -22,6 +22,7 @@ h1{
 #add-item-button-div{
     width: 70vw;
     margin: auto;
+    margin-bottom: 10vh;
 }
 
 #add-item-button-text{
@@ -35,4 +36,12 @@ h1{
     gap: 8px;
     width: 70vw;
     margin: auto;
+}
+
+#get-item-text{
+    margin: 0px;
+}
+
+thead{
+    background-color: lightgray;
 }

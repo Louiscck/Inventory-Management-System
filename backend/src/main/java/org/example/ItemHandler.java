@@ -24,6 +24,14 @@ public class ItemHandler implements HttpHandler {
 
     @Override
     public void handle(HttpExchange exchange){
+        if(!exchange.getRequestURI().getPath().equals("/item")){
+            if(exchange.getRequestMethod().equals("OPTIONS")){
+                handleCors(exchange);
+            } else {
+                sendNotFound(exchange);
+            }
+            return;
+        }
         try {
             String method = exchange.getRequestMethod();
             System.out.println("Received HTTP request: " + method);
@@ -32,32 +40,11 @@ public class ItemHandler implements HttpHandler {
                     handleCors(exchange);
                     break;
                 case "POST":
-                    String path = exchange.getRequestURI().getPath();
-                    String[] paths = path.split("/");
-                    if (paths.length == 2 && paths[1].equals("item")) {
-                        createItem(exchange);
-                    } else {
-                        sendNotFound(exchange);
-                    }
+                    createItem(exchange);
                     break;
                 case "GET":
-                    String urlEncoded = exchange.getRequestURI().toString(); //special characters are encoded as something like %20, %23, %25
-                    String url = URLDecoder.decode(urlEncoded, StandardCharsets.UTF_8); //e.g. /item?name=Relay&category=Electric
-                    String searchParam = url.split("\\?")[1]; //e.g. name=Relay&category=Electric
-                    String[] searchParams = searchParam.split("&"); //e.g. {name=Relay, category=Electric}
-                    HashMap<String, String> searchMap = new HashMap<>(); //e.g. map of {key=name, value=Relay}, {key=category, value=Electric}
-                    for(String s:searchParams){
-                        String[] pair = s.split("=");
-                        if(pair.length == 1) { //e.g. "search=", i.e. no search keyword is keyed in from frontend, which means get all result
-                            searchMap.put(pair[0], "");
-                        } else {
-                            searchMap.put(pair[0], pair[1]);
-                        }
-                    }
-                    if(searchMap.size() == 1 && searchMap.containsKey("search")){ //for now, only implement single keyword search {search= x}
-                        getItem(exchange, searchMap.get("search"));
-                    }
-                    //eventhough now only has single keyword search at frontend, using hashmap facilitate expansion for multi keyword search
+                    handleGetRequestRouting(exchange);
+                    //currently only possible to route to getItem() for single keyword search, may implement multiple keyword search in future
                     break;
             }
         } catch (Exception e){
@@ -66,6 +53,27 @@ public class ItemHandler implements HttpHandler {
         } finally {
             exchange.close();
         }
+    }
+
+    private void handleGetRequestRouting(HttpExchange exchange) throws Exception{
+        String query = URLDecoder.decode(exchange.getRequestURI().getQuery(), StandardCharsets.UTF_8); //e.g. name=Relay&category=Electric
+        String[] queryArray = query.split("&"); //e.g. {name=Relay, category=Electric}
+        HashMap<String, String> queryMap = new HashMap<>(); //e.g. map of {key=name, value=Relay}, {key=category, value=Electric}
+        for(String s:queryArray){
+            String[] pair = s.split("=");
+            if(pair.length == 1) { //e.g. "search=", i.e. no search keyword is keyed in from frontend, which means get all result
+                queryMap.put(pair[0], "");
+            } else {
+                queryMap.put(pair[0], pair[1]);
+            }
+        }
+        if(queryMap.size() == 1 && queryMap.containsKey("search")){ //for now, only implement single keyword search {search= x}
+            getItem(exchange, queryMap.get("search").trim());
+        } else {
+            ErrorResponse errorResponse = new ErrorResponse(400, "Bad request, query not allowed or not matched.");
+            sendResponse(exchange, errorResponse.getStatusCode(), errorResponse);
+        }
+        //eventhough now only has single keyword search at frontend, using hashmap facilitate expansion for multi keyword search
     }
 
     private void sendInternalServerError(HttpExchange exchange){
@@ -107,20 +115,16 @@ public class ItemHandler implements HttpHandler {
 
     private void createItem(HttpExchange exchange) throws Exception{
         InputStream is = exchange.getRequestBody();
-        try {
-            String requestJson = new String(is.readAllBytes(), StandardCharsets.UTF_8);
+        String requestJson = new String(is.readAllBytes(), StandardCharsets.UTF_8);
+        ErrorResponse errorResponse = new ErrorResponse();
+        if(!isBadRequest(requestJson, errorResponse)){
             Gson gson = new Gson();
-            ErrorResponse errorResponse = new ErrorResponse();
-            if(!isBadRequest(requestJson, errorResponse)){
-                Item item = gson.fromJson(requestJson, Item.class);
-                this.database.writeToDB(item);
-                errorResponse.setStatusCode(201);
-                exchange.getResponseHeaders().add("Location", "/item/" + item.getId());
-            }
-            sendResponse(exchange, errorResponse.getStatusCode(), errorResponse);
-        } catch (IOException e){
-            e.printStackTrace();
+            Item item = gson.fromJson(requestJson, Item.class);
+            this.database.writeToDB(item);
+            errorResponse.setStatusCode(201);
+            exchange.getResponseHeaders().add("Location", "/item/" + item.getId());
         }
+        sendResponse(exchange, errorResponse.getStatusCode(), errorResponse);
     }
 
     private boolean isBadRequest(String json, ErrorResponse errorResponse){
@@ -165,7 +169,6 @@ public class ItemHandler implements HttpHandler {
     }
 
     private void getItem(HttpExchange exchange, String keyword) throws Exception{
-        keyword = keyword.trim();
         ArrayList<Item> itemList = this.database.readFromDB(keyword, Item.class);
         sendResponse(exchange,200, itemList);
     }

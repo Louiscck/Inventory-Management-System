@@ -17,11 +17,15 @@ async function addItem(event){
         headers: {"Content-Type": "application/json"},
         body: jsonData
     })
+    printAddItemResponseMessage(response);
+}
 
+async function printAddItemResponseMessage(response){
     let responseData = null;
     if(response.headers.get("Content-Length") > 0){
         responseData = await response.json();
     }
+    //response of status 204 has no body and response.json() will cause error
     const textObj = document.getElementById("add-item-button-text");
     textObj.innerText = "";
     switch(response.status){
@@ -47,7 +51,18 @@ async function getItem(event){
 
     const url = "http://localhost:8080/item?" + queryString;
     const response = await fetch(url);
-    const responseData = await response.json();
+    let responseData = null;
+    if(response.headers.get("Content-Length") > 0){
+        responseData = await response.json();
+    }
+    //response of status 204 has no body and response.json() will cause error
+    if(response.status == 200){
+        displayItemTable(responseData);
+    }
+    printGetItemResponseMessage(response, responseData);
+}
+
+async function displayItemTable(responseData){
     console.log(responseData);
     const table = document.querySelector("#display-item-table tbody");
     const fieldOrder = ["name", "category", "specification", "unit", "amount"];
@@ -66,4 +81,21 @@ function addTableData(item){
     const cell = document.createElement("td");
     cell.textContent = item;
     return cell;
+}
+
+async function printGetItemResponseMessage(response, responseData){
+    const textObj = document.getElementById("get-item-text");
+    textObj.innerText = "";
+    switch(response.status){
+        case 200:
+            textObj.innerText = responseData.length + " search results found.";
+            break;
+        case 400:
+        case 404:
+        case 500:
+            textObj.innerText = responseData.errorMessage;
+            break;
+        default:
+            textObj.innerText = "Unexpected error occurred.";
+    }
 }
