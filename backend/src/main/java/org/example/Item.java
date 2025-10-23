@@ -24,6 +24,10 @@ public class Item {
         this.amount = amount;
     }
 
+    public Item(){
+
+    }
+
     public void printInfo(){
         System.out.println("Name = " + this.name +
                 ", Category = " + this.category +

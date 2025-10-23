@@ -13,7 +13,7 @@ public class UnknownHandler implements HttpHandler {
         if(exchange.getRequestMethod().equalsIgnoreCase("OPTIONS")){
             handleCors(exchange);
         } else {
-            Response response = new Response(404,"Page not found (endpoint doesn't exist).");
+            ErrorResponse response = new ErrorResponse(404,"Page not found (endpoint doesn't exist).");
             Gson gson = new Gson();
             String responseJson = gson.toJson(response);
             exchange.getResponseHeaders().add("Access-Control-Allow-Origin", "*");

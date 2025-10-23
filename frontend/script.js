@@ -1,4 +1,5 @@
 document.getElementById("add-item-button").addEventListener("click", addItem);
+document.getElementById("get-item-button").addEventListener("click", getItem);
 document.getElementById("amount-input").addEventListener("input", function(){
     this.value = Math.max(0,this.value);
 });
@@ -16,6 +17,7 @@ async function addItem(event){
         headers: {"Content-Type": "application/json"},
         body: jsonData
     })
+
     let responseData = null;
     if(response.headers.get("Content-Length") > 0){
         responseData = await response.json();
@@ -34,4 +36,17 @@ async function addItem(event){
         default:
             textObj.innerText = "Unexpected error occurred.";
     }
+}
+
+async function getItem(event){
+    const form = document.getElementById("get-item-form");
+    const formData = new FormData(form);
+    const data = Object.fromEntries(formData.entries());
+    const queryString = new URLSearchParams(data).toString();
+    console.log(queryString);
+
+    const url = "http://localhost:8080/item?" + queryString;
+    const response = await fetch(url);
+    const responseData = await response.json();
+    console.log(responseData);
 }

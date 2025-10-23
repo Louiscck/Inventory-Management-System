@@ -1,6 +1,5 @@
 package org.example;
 
-import com.fasterxml.jackson.databind.JsonMappingException;
 import com.google.gson.Gson;
 import com.sun.net.httpserver.HttpExchange;
 import com.sun.net.httpserver.HttpHandler;
@@ -8,12 +7,14 @@ import com.sun.net.httpserver.HttpHandler;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.lang.reflect.Field;
+import java.net.URLDecoder;
 import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
+import java.util.HashMap;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-
-import javax.swing.event.HyperlinkEvent;
 
 public class ItemHandler implements HttpHandler {
     private Database database;
@@ -25,14 +26,14 @@ public class ItemHandler implements HttpHandler {
     public void handle(HttpExchange exchange){
         try {
             String method = exchange.getRequestMethod();
-            String path = exchange.getRequestURI().getPath();
-            String[] paths = path.split("/");
             System.out.println("Received HTTP request: " + method);
             switch (method) {
                 case "OPTIONS":
                     handleCors(exchange);
                     break;
                 case "POST":
+                    String path = exchange.getRequestURI().getPath();
+                    String[] paths = path.split("/");
                     if (paths.length == 2 && paths[1].equals("item")) {
                         createItem(exchange);
                     } else {
@@ -40,7 +41,18 @@ public class ItemHandler implements HttpHandler {
                     }
                     break;
                 case "GET":
-                    getItem(exchange);
+                    String urlEncoded = exchange.getRequestURI().toString();
+                    String url = URLDecoder.decode(urlEncoded, StandardCharsets.UTF_8);
+                    String searchParam = url.split("\\?")[1];
+                    String[] searchParams = searchParam.split("&");
+                    HashMap<String, String> searchMap = new HashMap<>();
+                    for(String s:searchParams){
+                        searchMap.put(s.split("=")[0],s.split("=")[1]);
+                    }
+                    if(searchMap.size() == 1 && searchMap.containsKey("search")){
+                        getItem(exchange, searchMap.get("search"));
+                    }
+                    //eventhough now only has single keyword search at frontend, using hashmap facilitate expansion for multi keyword search
                     break;
             }
         } catch (Exception e){
@@ -52,8 +64,8 @@ public class ItemHandler implements HttpHandler {
     }
 
     private void sendInternalServerError(HttpExchange exchange){
-        Response response = new Response(500, "Internal server error.");
-        sendResponse(exchange, response);
+        ErrorResponse errorResponse = new ErrorResponse(500, "Internal server error.");
+        sendResponse(exchange, errorResponse.getStatusCode(), errorResponse);
     }
 
     private void handleCors(HttpExchange exchange){
@@ -68,19 +80,19 @@ public class ItemHandler implements HttpHandler {
     }
 
     private void sendNotFound(HttpExchange exchange){
-        Response response = new Response(404, "Page not found (endpoint not found).");
-        sendResponse(exchange, response);
+        ErrorResponse errorResponse = new ErrorResponse(404, "Page not found (endpoint not found).");
+        sendResponse(exchange, errorResponse.getStatusCode(), errorResponse);
     }
 
-    private void sendResponse(HttpExchange exchange, Response response){
+    private void sendResponse(HttpExchange exchange, int code, Object body){
         Gson gson = new Gson();
-        String responseJson = gson.toJson(response);
+        String bodyJson = gson.toJson(body);
         try{
             exchange.getResponseHeaders().add("Access-Control-Allow-Origin", "*");
             exchange.getResponseHeaders().add("Content-Type", "application/json");
-            exchange.sendResponseHeaders(response.getStatusCode(), responseJson.getBytes().length);
+            exchange.sendResponseHeaders(code, bodyJson.getBytes().length);
             OutputStream os = exchange.getResponseBody();
-            os.write(responseJson.getBytes());
+            os.write(bodyJson.getBytes());
             os.close();
         } catch (IOException e){
             e.printStackTrace();
@@ -92,20 +104,20 @@ public class ItemHandler implements HttpHandler {
         try {
             String requestJson = new String(is.readAllBytes(), StandardCharsets.UTF_8);
             Gson gson = new Gson();
-            Response response = new Response();
-            if(!isBadRequest(requestJson, response)){
+            ErrorResponse errorResponse = new ErrorResponse();
+            if(!isBadRequest(requestJson, errorResponse)){
                 Item item = gson.fromJson(requestJson, Item.class);
                 this.database.writeToDB(item);
-                response.setStatusCode(201);
+                errorResponse.setStatusCode(201);
                 exchange.getResponseHeaders().add("Location", "/item/" + item.getId());
             }
-            sendResponse(exchange, response);
+            sendResponse(exchange, errorResponse.getStatusCode(), errorResponse);
         } catch (IOException e){
             e.printStackTrace();
         }
     }
 
-    private boolean isBadRequest(String json, Response response){
+    private boolean isBadRequest(String json, ErrorResponse errorResponse){
         ObjectMapper objectMapper = new ObjectMapper();
         try{
             JsonNode jsonNode = objectMapper.readTree(json);
@@ -113,8 +125,8 @@ public class ItemHandler implements HttpHandler {
 
             for(String field: requiredField){
                 if(!jsonNode.hasNonNull(field) || jsonNode.get(field).asText().isEmpty()){
-                    response.setStatusCode(400);
-                    response.setErrorMessage("Missing fields. Please fill up the form.");
+                    errorResponse.setStatusCode(400);
+                    errorResponse.setErrorMessage("Missing fields. Please fill up the form.");
                     return true;
                 }
             }
@@ -130,14 +142,14 @@ public class ItemHandler implements HttpHandler {
                     throw new NumberFormatException();
                 }
             } catch (NumberFormatException e){
-                response.setStatusCode(400);
-                response.setErrorMessage("Amount has to be number.");
+                errorResponse.setStatusCode(400);
+                errorResponse.setErrorMessage("Amount has to be number.");
                 return true;
             }
 
             if (amount < 0){
-                response.setStatusCode(400);
-                response.setErrorMessage("Amount must be bigger than 0.");
+                errorResponse.setStatusCode(400);
+                errorResponse.setErrorMessage("Amount must be bigger than 0.");
                 return true;
             }
         } catch (Exception e){
@@ -146,7 +158,12 @@ public class ItemHandler implements HttpHandler {
         return false;
     }
 
-    private void getItem(HttpExchange exchange){
-
+    private void getItem(HttpExchange exchange, String keyword){
+        ArrayList<Item> itemList = this.database.readFromDB(keyword, Item.class);
+        if(itemList == null){
+            throw new IllegalArgumentException("The class itself or its fields are not mapped to the DB");
+            //make sure to map with annotation
+        }
+        sendResponse(exchange,200, itemList);
     }
 }

@@ -26,4 +26,13 @@ h1{
 
 #add-item-button-text{
     margin:2px;
+    min-height: 2em;
+}
+
+#get-item-div{
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+    width: 70vw;
+    margin: auto;
 }
