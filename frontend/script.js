@@ -51,6 +51,7 @@ async function getItem(event){
     console.log(responseData);
     const table = document.querySelector("#display-item-table tbody");
     const fieldOrder = ["name", "category", "specification", "unit", "amount"];
+    table.innerHTML = "";
     responseData.forEach(item => addRow(table, item, fieldOrder));
 }
 

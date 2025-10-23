@@ -41,15 +41,20 @@ public class ItemHandler implements HttpHandler {
                     }
                     break;
                 case "GET":
-                    String urlEncoded = exchange.getRequestURI().toString();
-                    String url = URLDecoder.decode(urlEncoded, StandardCharsets.UTF_8);
-                    String searchParam = url.split("\\?")[1];
-                    String[] searchParams = searchParam.split("&");
-                    HashMap<String, String> searchMap = new HashMap<>();
+                    String urlEncoded = exchange.getRequestURI().toString(); //special characters are encoded as something like %20, %23, %25
+                    String url = URLDecoder.decode(urlEncoded, StandardCharsets.UTF_8); //e.g. /item?name=Relay&category=Electric
+                    String searchParam = url.split("\\?")[1]; //e.g. name=Relay&category=Electric
+                    String[] searchParams = searchParam.split("&"); //e.g. {name=Relay, category=Electric}
+                    HashMap<String, String> searchMap = new HashMap<>(); //e.g. map of {key=name, value=Relay}, {key=category, value=Electric}
                     for(String s:searchParams){
-                        searchMap.put(s.split("=")[0],s.split("=")[1]);
+                        String[] pair = s.split("=");
+                        if(pair.length == 1) { //e.g. "search=", i.e. no search keyword is keyed in from frontend, which means get all result
+                            searchMap.put(pair[0], "");
+                        } else {
+                            searchMap.put(pair[0], pair[1]);
+                        }
                     }
-                    if(searchMap.size() == 1 && searchMap.containsKey("search")){
+                    if(searchMap.size() == 1 && searchMap.containsKey("search")){ //for now, only implement single keyword search {search= x}
                         getItem(exchange, searchMap.get("search"));
                     }
                     //eventhough now only has single keyword search at frontend, using hashmap facilitate expansion for multi keyword search
@@ -159,12 +164,8 @@ public class ItemHandler implements HttpHandler {
         return false;
     }
 
-    private void getItem(HttpExchange exchange, String keyword){
+    private void getItem(HttpExchange exchange, String keyword) throws Exception{
         ArrayList<Item> itemList = this.database.readFromDB(keyword, Item.class);
-        if(itemList == null){
-            throw new IllegalArgumentException("The class itself or its fields are not mapped to the DB");
-            //make sure to map with annotation
-        }
         sendResponse(exchange,200, itemList);
     }
 }

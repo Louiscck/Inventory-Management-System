@@ -70,69 +70,85 @@ public class Database {
     }
 
     private void appendIdAfterCreation(ResultSet resultSet, Object object) throws SQLException, IllegalAccessException{
-        if(resultSet != null){
-            if(resultSet.next()) {
-                Field[] fields = object.getClass().getDeclaredFields();
-                for (Field field : fields) {
-                    if (field.isAnnotationPresent(PrimaryKey.class)) {
-                        field.setAccessible(true);
-                        field.set(object, resultSet.getInt(1));
-                        break;
-                        //currently only work for single generated key for id as primary key, haven't forsee other usage
-                    }
+        if(resultSet == null) {
+            return;
+        }
+        if(resultSet.next()) {
+            Field[] fields = object.getClass().getDeclaredFields();
+            for (Field field : fields) {
+                if (field.isAnnotationPresent(PrimaryKey.class)) {
+                    field.setAccessible(true);
+                    field.set(object, resultSet.getInt(1));
+                    break;
+                    //currently only work for single generated key for id as primary key, haven't forsee other usage
                 }
             }
         }
     }
 
-    public <T> ArrayList<T> readFromDB(String keyword, Class<T> classType){
+    public <T> ArrayList<T> readFromDB(String keyword, Class<T> classType) throws Exception{
         if(classType.isAnnotationPresent(Table.class) == false) {
-            return null;
+            throw new IllegalArgumentException("The class is not mapped to a table in the database");
         }
-        Table annotation = classType.getAnnotation(Table.class);
+        Connection connection = DriverManager.getConnection(this.url, this.user, this.password);
+        PreparedStatement readStatement = buildReadStatement(connection, keyword, classType);
+        System.out.println("Reading from DB...");
+        ResultSet resultSet = readStatement.executeQuery();
+        ArrayList<T> list = convertToListOfClass(resultSet, classType);
+        return list;
+    }
+
+    private <T> PreparedStatement buildReadStatement(Connection connection, String keyword, Class<T> classType) throws SQLException{
+        //search database based on contains(keyword) on EVERY annotated column
+        Table tableAnnotation = classType.getAnnotation(Table.class);
         Field[] fields = classType.getDeclaredFields();
-        String sql = "SELECT * FROM " + annotation.name() + " WHERE ";
-        boolean hasAtLeastOneColumn = false;
+        String sql = "SELECT * FROM " + tableAnnotation.name() + " WHERE ";
+        int annotatedColumn = 0;
         for(int i=0; i<fields.length; i++){
             if(fields[i].isAnnotationPresent(Column.class) == true){
-                hasAtLeastOneColumn = true;
-                sql += fields[i].getAnnotation(Column.class).name() + " LIKE '%" + keyword + "%' OR ";
+                annotatedColumn ++;
+                sql += fields[i].getAnnotation(Column.class).name() + " LIKE ? OR ";
             }
         }
-        if(hasAtLeastOneColumn == false){
-            return null;
+        if(annotatedColumn == 0){
+            throw new IllegalArgumentException("The class don't have any field that is mapped to the database.");
             //may seem redundant with classType.isAnnotationPresent, double protection in case a class is annotated with Table but not Column (which is not logic)
         }
         sql = sql.substring(0, sql.length()-4);
         sql += ";";
-        System.out.println(sql);
+        PreparedStatement statement = connection.prepareStatement(sql);
+        for(int i=0; i<annotatedColumn; i++){
+            statement.setObject(i+1, "%" + keyword + "%");
+        }
+        return statement;
+    }
+
+    private <T> ArrayList<T> convertToListOfClass(ResultSet resultSet, Class<T> classType) throws Exception{
         ArrayList<T> list = new ArrayList<>();
-        try {
-            Connection connection = DriverManager.getConnection(this.url, this.user, this.password);
-            PreparedStatement readStatement = connection.prepareStatement(sql);
-            System.out.println("Reading from DB...");
-            ResultSet resultSet = readStatement.executeQuery();
-            ResultSetMetaData metaData = resultSet.getMetaData();
-            int columnCount = metaData.getColumnCount();
-            while(resultSet.next()){
-                T object = classType.getDeclaredConstructor().newInstance(); //create object of class <T>
-                Map<String, Object> pairs = new HashMap<>();
-                for(int i=1; i<=columnCount; i++){
-                    pairs.put(metaData.getColumnName(i), resultSet.getObject(i));
-                }
-                for(Field field:fields){
-                    if(field.isAnnotationPresent(Column.class) == true){
-                        Object value = pairs.get(field.getAnnotation(Column.class).name());
+        ResultSetMetaData metaData = resultSet.getMetaData();
+        Field[] fields = classType.getDeclaredFields();
+        int columnCount = metaData.getColumnCount();
+        while(resultSet.next()){
+            T object = classType.getDeclaredConstructor().newInstance(); //create object of class <T>
+            Map<String, Object> pairs = new HashMap<>(); //key = column name AS IN DATABASE
+            for(int i=1; i<=columnCount; i++){
+                pairs.put(metaData.getColumnName(i), resultSet.getObject(i));
+            }
+            for(Field field:fields){
+                if(field.isAnnotationPresent(Column.class) == true){
+                    String key = field.getAnnotation(Column.class).name();
+                    if(pairs.containsKey(key)){
+                        Object value = pairs.get(key);
                         field.setAccessible(true);
                         field.set(object, value);
+                    } else {
+                        System.out.println("Field not found in/not mapped to database: " + key);
+                        //should never reach here as SQLSyntaxErrorException will occur first when querying the database with a non-existing column name
                     }
                 }
-                list.add(object);
             }
-        } catch (SQLException e){
-            e.printStackTrace();
-        } finally {
-            return list;
+            list.add(object);
         }
+        return list;
     }
 }
