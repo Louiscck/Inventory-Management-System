@@ -19,40 +19,68 @@ public class Database {
     }
 
     //just ensure the class and fields are annotated with the correct names according to the DB, reflection + annotation handles the mapping
-    public void writeToDB(Object object) {
+    public void writeToDB(Object object) throws Exception{
         if(object.getClass().isAnnotationPresent(Table.class) == false){
-            return;
-        } else {
-            Table annotation = object.getClass().getAnnotation(Table.class);
-            String sql = "INSERT INTO " + annotation.name() + "VALUES (";
-            try{
-                Connection connection = DriverManager.getConnection(this.url, this.user, this.password);
-                PreparedStatement statement = connection.prepareStatement("INSERT INTO items VALUES (?, ?, ?, ?, ?, ?)", Statement.RETURN_GENERATED_KEYS);
-                Field[] field = object.getClass().getDeclaredFields();
+            throw new IllegalArgumentException("This object's class has no mapping in the database");
+        }
+        Connection connection = DriverManager.getConnection(this.url, this.user, this.password);
+        PreparedStatement statement = buildWriteStatement(connection, object);
+        System.out.println("Writing to DB...");
+        statement.executeUpdate();
 
-                for(int i=0; i<field.length; i++){
-                    field[i].setAccessible(true);
-                    if(field[i].isAnnotationPresent(PrimaryKey.class)){
-                        statement.setObject(i+1, null);
-                    } else {
-                        statement.setObject(i+1, field[i].get(object));
+        ResultSet resultSet = statement.getGeneratedKeys();
+        appendIdAfterCreation(resultSet, object);
+        connection.close();
+    }
+
+    private PreparedStatement buildWriteStatement(Connection connection, Object object) throws SQLException, IllegalAccessException{
+        Table tableAnnotation = object.getClass().getAnnotation(Table.class);
+        Field[] fields = object.getClass().getDeclaredFields();
+        ArrayList<String> fieldName = new ArrayList<>();
+        ArrayList<Object> fieldValue = new ArrayList<>();
+        for(Field field: fields){
+            if(field.isAnnotationPresent(Column.class)){
+                field.setAccessible(true);
+                fieldName.add(field.getAnnotation(Column.class).name());
+                if (field.isAnnotationPresent(PrimaryKey.class)) {
+                    fieldValue.add(null); //primary key are auto incremented in database
+                } else {
+                    fieldValue.add(field.get(object));
+                }
+            }
+        }
+        String sql = "INSERT INTO " + tableAnnotation.name() + " (";
+        for(String s:fieldName){
+            sql += s + ",";
+        }
+        sql = sql.substring(0,sql.length()-1);
+        sql += ") VALUES (";
+        for(String s:fieldName){
+            sql += "?,";
+        }
+        sql = sql.substring(0, sql.length()-1);
+        sql += ");";
+
+        PreparedStatement statement = connection.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS);
+
+        for(int i=0; i<fieldValue.size(); i++){
+            statement.setObject(i+1, fieldValue.get(i));
+        }
+        return statement;
+    }
+
+    private void appendIdAfterCreation(ResultSet resultSet, Object object) throws SQLException, IllegalAccessException{
+        if(resultSet != null){
+            if(resultSet.next()) {
+                Field[] fields = object.getClass().getDeclaredFields();
+                for (Field field : fields) {
+                    if (field.isAnnotationPresent(PrimaryKey.class)) {
+                        field.setAccessible(true);
+                        field.set(object, resultSet.getInt(1));
+                        break;
+                        //currently only work for single generated key for id as primary key, haven't forsee other usage
                     }
                 }
-                System.out.println("Writing to DB...");
-                statement.executeUpdate();
-
-                ResultSet resultSet = statement.getGeneratedKeys();
-                if(resultSet.next()){
-                    if(object instanceof Item){
-                        ((Item) object).setId(resultSet.getInt(1));
-                        System.out.println("Id of the new item is " + ((Item) object).getId());
-                    }
-                }
-
-                connection.close();
-            } catch (SQLException | IllegalAccessException e){
-                e.printStackTrace();
-                throw new RuntimeException("Database write failed", e);
             }
         }
     }

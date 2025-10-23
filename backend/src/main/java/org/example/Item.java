@@ -11,6 +11,7 @@ public class Item {
     private String category;
     @Column(name = "specification")
     private String specification;
+    private String factory;
     @Column(name = "unit")
     private String unit;
     @Column(name = "amount")

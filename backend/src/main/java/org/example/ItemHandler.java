@@ -85,7 +85,7 @@ public class ItemHandler implements HttpHandler {
     }
 
     private void sendResponse(HttpExchange exchange, int code, Object body){
-        System.out.println("sending response back to client...");
+        System.out.println("Sending response back to client...");
         Gson gson = new Gson();
         String bodyJson = gson.toJson(body);
         try{
@@ -100,7 +100,7 @@ public class ItemHandler implements HttpHandler {
         }
     }
 
-    private void createItem(HttpExchange exchange){
+    private void createItem(HttpExchange exchange) throws Exception{
         InputStream is = exchange.getRequestBody();
         try {
             String requestJson = new String(is.readAllBytes(), StandardCharsets.UTF_8);
