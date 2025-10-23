@@ -49,4 +49,20 @@ async function getItem(event){
     const response = await fetch(url);
     const responseData = await response.json();
     console.log(responseData);
+    const table = document.querySelector("#display-item-table tbody");
+    const fieldOrder = ["name", "category", "specification", "unit", "amount"];
+    responseData.forEach(item => addRow(table, item, fieldOrder));
+}
+
+function addRow(table, item, fieldOrder) {
+    //make sure fieldOrder is consistent with display order in table
+    const row = document.createElement("tr");
+    fieldOrder.forEach(field => row.appendChild(addTableData(item[field])));
+    table.appendChild(row);
+}
+
+function addTableData(item){
+    const cell = document.createElement("td");
+    cell.textContent = item;
+    return cell;
 }

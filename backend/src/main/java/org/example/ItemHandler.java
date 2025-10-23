@@ -85,6 +85,7 @@ public class ItemHandler implements HttpHandler {
     }
 
     private void sendResponse(HttpExchange exchange, int code, Object body){
+        System.out.println("sending response back to client...");
         Gson gson = new Gson();
         String bodyJson = gson.toJson(body);
         try{
