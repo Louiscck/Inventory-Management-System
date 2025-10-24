@@ -24,21 +24,18 @@ public class ItemHandler implements HttpHandler {
 
     @Override
     public void handle(HttpExchange exchange){
-        if(!exchange.getRequestURI().getPath().equals("/item")){
-            if(exchange.getRequestMethod().equals("OPTIONS")){
-                handleCors(exchange);
-            } else {
-                sendNotFound(exchange);
-            }
-            return;
-        }
         try {
             String method = exchange.getRequestMethod();
             System.out.println("Received HTTP request: " + method);
+            if(method.equals("OPTIONS")){
+                handleCors(exchange);
+                return;
+            }
+            if(!exchange.getRequestURI().getPath().split("/")[1].equals("item")){
+                sendNotFound(exchange);
+                return;
+            }
             switch (method) {
-                case "OPTIONS":
-                    handleCors(exchange);
-                    break;
                 case "POST":
                     createItem(exchange);
                     break;
@@ -98,7 +95,11 @@ public class ItemHandler implements HttpHandler {
     }
 
     private void sendResponse(HttpExchange exchange, int code, Object body){
-        System.out.println("Sending response back to client...");
+        String message = "Sending response back to client..." + code;
+        if(body instanceof ErrorResponse){
+            message += " " + ((ErrorResponse) body).getErrorMessage();
+        }
+        System.out.println(message);
         Gson gson = new Gson();
         String bodyJson = gson.toJson(body);
         try{

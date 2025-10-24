@@ -1,10 +1,12 @@
+import RowObject from './row-object.js';
+
 document.getElementById("add-item-button").addEventListener("click", addItem);
 document.getElementById("get-item-button").addEventListener("click", getItem);
 document.getElementById("amount-input").addEventListener("input", function(){
     this.value = Math.max(0,this.value);
 });
 
-async function addItem(event){
+async function addItem(){
     const form = document.getElementById("add-item-form");
     const formData = new FormData(form);
     const data = Object.fromEntries(formData.entries());
@@ -41,7 +43,7 @@ function printAddItemResponseMessage(response, responseData){
     }
 }
 
-async function getItem(event){
+async function getItem(){
     const form = document.getElementById("get-item-form");
     const formData = new FormData(form);
     const data = Object.fromEntries(formData.entries());
@@ -61,7 +63,6 @@ async function getItem(event){
 }
 
 function displayItemTable(responseData){
-    console.log(responseData);
     const table = document.querySelector("#display-item-table tbody");
     const fieldOrder = ["name", "category", "specification", "unit", "amount"];
     //make sure fieldOrder is consistent with display order in table header
@@ -70,15 +71,11 @@ function displayItemTable(responseData){
 }
 
 function addRow(table, item, fieldOrder) {
-    const row = document.createElement("tr");
-    fieldOrder.forEach(field => row.appendChild(addTableData(item[field])));
-    table.appendChild(row);
-}
-
-function addTableData(item){
-    const cell = document.createElement("td");
-    cell.textContent = item;
-    return cell;
+    console.log(item);
+    const rowObject = new RowObject(item, fieldOrder);
+    rowObject.editButton.addEventListener("click", editItem);
+    rowObject.deleteButton.addEventListener("click", deleteItem);
+    table.appendChild(rowObject.row);
 }
 
 function printGetItemResponseMessage(response, responseData){
@@ -96,4 +93,23 @@ function printGetItemResponseMessage(response, responseData){
         default:
             textObj.innerText = "Unexpected error occurred.";
     }
+}
+
+async function deleteItem(event){
+    const confirmed = confirm("Are you sure you want to delete this item?");
+    if(!confirmed){
+        return;
+    }
+    const button = event.currentTarget;
+    const rowObject = button.rowObject;
+    const item = rowObject.item;
+
+    const url = "http://localhost:8080/item/" + item.id;
+    const response = await fetch(url, {
+        method: "DELETE",
+    })
+}
+
+function editItem(event){
+
 }
