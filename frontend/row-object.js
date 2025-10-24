@@ -1,13 +1,13 @@
 export default class RowObject{
     row;
     item;
-    fieldOrder;
+    fieldNameOrder;
     editButton;
     deleteButton;
 
-    constructor(item, fieldOrder){
+    constructor(item, fieldNameOrder){
         this.item = item;
-        this.fieldOrder = fieldOrder;
+        this.fieldNameOrder = fieldNameOrder;
         this.editButton = this.createButton("bi bi-pencil-fill"); //bootstrap edit icon
         this.deleteButton = this.createButton("bi bi-trash-fill"); //bootstrap delete icon
         this.initRow();
@@ -17,19 +17,22 @@ export default class RowObject{
         const button = document.createElement("button");
         button.innerHTML = '<i class="' + iconClass + '"></i>';
         button.rowObject = this; //link back to RowObject
+        button.mode = "edit";
         return button;
     }
 
     initRow(){
         this.row = document.createElement("tr");
-        this.fieldOrder.forEach(field => this.row.appendChild(this.createDataCell(this.item[field])));
+        this.fieldNameOrder.forEach(fieldName => this.row.appendChild(this.createDataCell(this.item, fieldName)));
         this.row.appendChild(this.createButtonCell(this.editButton));
         this.row.appendChild(this.createButtonCell(this.deleteButton));
     }
 
-    createDataCell(field){
+    createDataCell(item, fieldName){
         const cell = document.createElement("td");
-        cell.textContent = field;
+        cell.textContent = item[fieldName];
+        cell.type = "field";
+        cell.name = fieldName;
         return cell;
     }
 
@@ -37,6 +40,7 @@ export default class RowObject{
         const cell = document.createElement("td");
         cell.style.width = "2vw";
         cell.appendChild(button);
+        cell.type = "button";
         return cell;
     }
 }

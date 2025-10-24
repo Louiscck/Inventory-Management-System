@@ -64,10 +64,10 @@ async function getItem(){
 
 function displayItemTable(responseData){
     const table = document.querySelector("#display-item-table tbody");
-    const fieldOrder = ["name", "category", "specification", "unit", "amount"];
-    //make sure fieldOrder is consistent with display order in table header
+    const fieldNameOrder = ["name", "category", "specification", "unit", "amount"];
+    //make sure fieldNameOrder is consistent with display order in table header
     table.innerHTML = "";
-    responseData.forEach(item => addRow(table, item, fieldOrder));
+    responseData.forEach(item => addRow(table, item, fieldNameOrder));
 }
 
 function addRow(table, item, fieldOrder) {
@@ -136,6 +136,101 @@ function printDeleteItemResponseMessage(response, responseData){
     }
 }
 
-function editItem(event){
+async function editItem(event){
+    const button = event.currentTarget;
+    const rowObject = button.rowObject;
+    const row = rowObject.row;
+    const item = rowObject.item;
+    const cells = row.querySelectorAll("td");
+    if(button.mode === "edit"){
+        button.mode = "submit";
+        button.innerHTML = '<i class="bi bi-check2-all"></i>';
+        cells.forEach(cell => addInputToCell(cell, item));
+    } else if (button.mode === "submit"){
+        button.mode = "edit";
+        button.innerHTML = '<i class="bi bi-pencil-fill"></i>';
+        if(!isInputChanged(cells, item)){
+            document.getElementById("delete-edit-item-text").innerText = "No changes detected.";
+        } else {
+            updateItem(item, cells);
+            const url = "http://localhost:8080/item/" + item.id;
+            const jsonData = JSON.stringify(item);
+            console.log("Updating item with ID: " + item.id + " with data: " + jsonData);
+            const response = await fetch(url, {
+                method: "PUT",
+                headers: {"Content-Type": "application/json"},
+                body: jsonData
+            })
+            let responseData = null; //204 has no body, may cause error when calling response.json()
+            if(response.status != 204){
+                responseData = await response.json();
+            }
+            printEditItemResponseMessage(response, responseData);
+        }
+        cells.forEach(cell => removeInputFromCell(cell, item));
+    }
+}
 
+function addInputToCell(cell, item){
+    if(cell.type === "field"){
+        cell.textContent = "";
+        const value = item[cell.name];
+        const input = document.createElement("input");
+        input.type = "text";
+        input.value = value;
+        input.style.width = "100%";
+        cell.appendChild(input);
+    }
+}
+
+function isInputChanged(cells, item){
+    let changed = false;
+    for(const cell of cells){
+        if(cell.type === "field"){
+            const input = cell.querySelector("input");
+            let value = input.value.trim();
+            if(cell.name === "amount"){
+                value = Number(value);
+            }
+            if(value !== item[cell.name]){
+                changed = true;
+                break;
+            }
+        }
+    }
+    return changed;
+}
+
+function removeInputFromCell(cell, item){
+    if(cell.type === "field"){
+        cell.textContent = item[cell.name];
+    }
+}
+
+function updateItem(item, cells){
+    for(const cell of cells){
+        if(cell.type === "field"){
+            item[cell.name] = cell.querySelector("input").value.trim();
+            if(cell.name === "amount"){
+                item[cell.name] = Number(item[cell.name]);
+            }
+        }
+    }
+}
+
+function printEditItemResponseMessage(response, responseData){
+    const textObj = document.getElementById("delete-edit-item-text");
+    textObj.innerText = "";
+    switch(response.status){
+        case 204:
+            textObj.innerText = "Item updated successfully!";
+            break;
+        case 400:
+        case 404:
+        case 500:
+            textObj.innerText = responseData.errorMessage;
+            break;
+        default:
+            textObj.innerText = "Unexpected error occurred.";
+    }
 }
