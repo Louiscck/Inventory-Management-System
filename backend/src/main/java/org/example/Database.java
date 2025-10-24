@@ -155,4 +155,27 @@ public class Database {
         }
         return list;
     }
+
+    public <T> boolean deleteInDB(int id, Class<T> classType) throws SQLException{
+        if(classType.isAnnotationPresent(Table.class) == false) {
+            throw new IllegalArgumentException("The class is not mapped to a table in the database");
+        }
+        boolean isDeleteSuccess = true;
+        Connection connection = DriverManager.getConnection(this.url, this.user, this.password);
+        PreparedStatement deleteStatement = buildDeleteStatement(connection, id, classType);
+        System.out.println("Deleting in DB...");
+        int affectedRow = deleteStatement.executeUpdate();
+        if(affectedRow == 0){
+            isDeleteSuccess = false;
+        }
+        return isDeleteSuccess;
+    }
+
+    private <T> PreparedStatement buildDeleteStatement(Connection connection, int id, Class<T> classType) throws SQLException{
+        Table tableAnnotation = classType.getAnnotation(Table.class);
+        String sql = "DELETE FROM " + tableAnnotation.name() + " WHERE id = ?";
+        PreparedStatement statement = connection.prepareStatement(sql);
+        statement.setObject(1, id);
+        return statement;
+    }
 }

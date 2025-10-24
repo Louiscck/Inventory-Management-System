@@ -11,7 +11,7 @@ async function addItem(){
     const formData = new FormData(form);
     const data = Object.fromEntries(formData.entries());
     const jsonData = JSON.stringify(data);
-    console.log(jsonData);
+    console.log("Creating resource: "+jsonData);
 
     const url = "http://localhost:8080/item";
     const response = await fetch(url, {
@@ -22,7 +22,7 @@ async function addItem(){
     if(response.status == 204){
         return; //has no body, may cause error when calling response.json()
     }
-    let responseData = await response.json();
+    const responseData = await response.json();
     printAddItemResponseMessage(response, responseData);
 }
 
@@ -48,14 +48,14 @@ async function getItem(){
     const formData = new FormData(form);
     const data = Object.fromEntries(formData.entries());
     const queryString = new URLSearchParams(data).toString();
-    console.log(queryString);
+    console.log("Search keyword: " + queryString);
 
     const url = "http://localhost:8080/item?" + queryString;
     const response = await fetch(url);
     if(response.status == 204){
         return; //has no body, may cause error when calling response.json()
     }
-    let responseData = await response.json();
+    const responseData = await response.json();
     if(response.status == 200){
         displayItemTable(responseData);
     }
@@ -71,7 +71,6 @@ function displayItemTable(responseData){
 }
 
 function addRow(table, item, fieldOrder) {
-    console.log(item);
     const rowObject = new RowObject(item, fieldOrder);
     rowObject.editButton.addEventListener("click", editItem);
     rowObject.deleteButton.addEventListener("click", deleteItem);
@@ -105,9 +104,36 @@ async function deleteItem(event){
     const item = rowObject.item;
 
     const url = "http://localhost:8080/item/" + item.id;
+    console.log("Deleting item with ID: " + item.id);
     const response = await fetch(url, {
         method: "DELETE",
     })
+    let responseData = null; //204 has no body, may cause error when calling response.json()
+    if(response.status != 204){
+        responseData = await response.json();
+    }
+    printDeleteItemResponseMessage(response, responseData);
+    if(response.status == 204){
+        const table = document.querySelector("#display-item-table tbody");
+        table.removeChild(rowObject.row);
+    }
+}
+
+function printDeleteItemResponseMessage(response, responseData){
+    const textObj = document.getElementById("delete-edit-item-text");
+    textObj.innerText = "";
+    switch(response.status){
+        case 204:
+            textObj.innerText = "Item deleted successfully!";
+            break;
+        case 400:
+        case 404:
+        case 500:
+            textObj.innerText = responseData.errorMessage;
+            break;
+        default:
+            textObj.innerText = "Unexpected error occurred.";
+    }
 }
 
 function editItem(event){

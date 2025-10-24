@@ -45,3 +45,12 @@ h1{
 thead{
     background-color: lightgray;
 }
+
+#display-item-table-div{
+    width: 70vw;
+    margin: auto;
+}
+
+#delete-edit-item-text{
+    margin: 0px;
+}

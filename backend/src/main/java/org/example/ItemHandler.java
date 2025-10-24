@@ -43,6 +43,9 @@ public class ItemHandler implements HttpHandler {
                     handleGetRequestRouting(exchange);
                     //currently only possible to route to getItem() for single keyword search, may implement multiple keyword search in future
                     break;
+                case "DELETE":
+                    deleteItem(exchange);
+                    break;
             }
         } catch (Exception e){
             e.printStackTrace();
@@ -73,20 +76,16 @@ public class ItemHandler implements HttpHandler {
         //eventhough now only has single keyword search at frontend, using hashmap facilitate expansion for multi keyword search
     }
 
+    //TODO: wrap sendInternalServerError, handleCors, sendNotFound, and sendResponse in another class
     private void sendInternalServerError(HttpExchange exchange){
         ErrorResponse errorResponse = new ErrorResponse(500, "Internal server error.");
         sendResponse(exchange, errorResponse.getStatusCode(), errorResponse);
     }
 
     private void handleCors(HttpExchange exchange){
-        try{
-            exchange.getResponseHeaders().add("Access-Control-Allow-Origin", "*");
-            exchange.getResponseHeaders().add("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE");
-            exchange.getResponseHeaders().add("Access-Control-Allow-Headers", "Content-Type");
-            exchange.sendResponseHeaders(204, -1); // No response body
-        } catch (IOException e){
-            e.printStackTrace();
-        }
+        exchange.getResponseHeaders().add("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE");
+        exchange.getResponseHeaders().add("Access-Control-Allow-Headers", "Content-Type");
+        sendResponse(exchange,204,null);
     }
 
     private void sendNotFound(HttpExchange exchange){
@@ -100,10 +99,14 @@ public class ItemHandler implements HttpHandler {
             message += " " + ((ErrorResponse) body).getErrorMessage();
         }
         System.out.println(message);
-        Gson gson = new Gson();
-        String bodyJson = gson.toJson(body);
         try{
             exchange.getResponseHeaders().add("Access-Control-Allow-Origin", "*");
+            if(body == null){
+                exchange.sendResponseHeaders(code, -1); // No response body
+                return;
+            }
+            Gson gson = new Gson();
+            String bodyJson = gson.toJson(body);
             exchange.getResponseHeaders().add("Content-Type", "application/json");
             exchange.sendResponseHeaders(code, bodyJson.getBytes().length);
             OutputStream os = exchange.getResponseBody();
@@ -118,7 +121,7 @@ public class ItemHandler implements HttpHandler {
         InputStream is = exchange.getRequestBody();
         String requestJson = new String(is.readAllBytes(), StandardCharsets.UTF_8);
         ErrorResponse errorResponse = new ErrorResponse();
-        if(!isBadRequest(requestJson, errorResponse)){
+        if(!isBadCreateRequest(requestJson, errorResponse)){
             Gson gson = new Gson();
             Item item = gson.fromJson(requestJson, Item.class);
             this.database.writeToDB(item);
@@ -128,7 +131,7 @@ public class ItemHandler implements HttpHandler {
         sendResponse(exchange, errorResponse.getStatusCode(), errorResponse);
     }
 
-    private boolean isBadRequest(String json, ErrorResponse errorResponse){
+    private boolean isBadCreateRequest(String json, ErrorResponse errorResponse){
         ObjectMapper objectMapper = new ObjectMapper();
         try{
             JsonNode jsonNode = objectMapper.readTree(json);
@@ -172,5 +175,31 @@ public class ItemHandler implements HttpHandler {
     private void getItem(HttpExchange exchange, String keyword) throws Exception{
         ArrayList<Item> itemList = this.database.readFromDB(keyword, Item.class);
         sendResponse(exchange,200, itemList);
+    }
+
+    private void deleteItem(HttpExchange exchange) throws Exception{
+        String idString = exchange.getRequestURI().getPath().split("/")[2];
+        if(isBadDeleteRequest(idString, exchange)){
+            return;
+        }
+        int id = Integer.parseInt(idString);
+        boolean isSuccess = this.database.deleteInDB(id, Item.class);
+        if(isSuccess){
+            sendResponse(exchange, 204, null);
+        } else {
+            ErrorResponse errorResponse = new ErrorResponse(404, "Item not found in database.");
+            sendResponse(exchange, errorResponse.getStatusCode(), errorResponse);
+        }
+    }
+
+    private boolean isBadDeleteRequest(String idString, HttpExchange exchange){
+        try{
+            int id = Integer.parseInt(idString);
+        } catch (NumberFormatException e){
+            ErrorResponse errorResponse = new ErrorResponse(400, "Item id must be a number.");
+            sendResponse(exchange, errorResponse.getStatusCode(), errorResponse);
+            return true;
+        }
+        return false;
     }
 }
