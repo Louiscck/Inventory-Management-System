@@ -17,15 +17,14 @@ async function addItem(event){
         headers: {"Content-Type": "application/json"},
         body: jsonData
     })
-    printAddItemResponseMessage(response);
+    if(response.status == 204){
+        return; //has no body, may cause error when calling response.json()
+    }
+    let responseData = await response.json();
+    printAddItemResponseMessage(response, responseData);
 }
 
-async function printAddItemResponseMessage(response){
-    let responseData = null;
-    if(response.headers.get("Content-Length") > 0){
-        responseData = await response.json();
-    }
-    //response of status 204 has no body and response.json() will cause error
+function printAddItemResponseMessage(response, responseData){
     const textObj = document.getElementById("add-item-button-text");
     textObj.innerText = "";
     switch(response.status){
@@ -51,27 +50,26 @@ async function getItem(event){
 
     const url = "http://localhost:8080/item?" + queryString;
     const response = await fetch(url);
-    let responseData = null;
-    if(response.headers.get("Content-Length") > 0){
-        responseData = await response.json();
+    if(response.status == 204){
+        return; //has no body, may cause error when calling response.json()
     }
-    //response of status 204 has no body and response.json() will cause error
+    let responseData = await response.json();
     if(response.status == 200){
         displayItemTable(responseData);
     }
     printGetItemResponseMessage(response, responseData);
 }
 
-async function displayItemTable(responseData){
+function displayItemTable(responseData){
     console.log(responseData);
     const table = document.querySelector("#display-item-table tbody");
     const fieldOrder = ["name", "category", "specification", "unit", "amount"];
+    //make sure fieldOrder is consistent with display order in table header
     table.innerHTML = "";
     responseData.forEach(item => addRow(table, item, fieldOrder));
 }
 
 function addRow(table, item, fieldOrder) {
-    //make sure fieldOrder is consistent with display order in table
     const row = document.createElement("tr");
     fieldOrder.forEach(field => row.appendChild(addTableData(item[field])));
     table.appendChild(row);
@@ -83,7 +81,7 @@ function addTableData(item){
     return cell;
 }
 
-async function printGetItemResponseMessage(response, responseData){
+function printGetItemResponseMessage(response, responseData){
     const textObj = document.getElementById("get-item-text");
     textObj.innerText = "";
     switch(response.status){
