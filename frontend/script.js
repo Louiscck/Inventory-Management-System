@@ -152,7 +152,7 @@ async function editItem(event){
         if(!isInputChanged(cells, item)){
             document.getElementById("delete-edit-item-text").innerText = "No changes detected.";
         } else {
-            updateItem(item, cells);
+            syncItemWithCell(item, cells);
             const url = "http://localhost:8080/item/" + item.id;
             const jsonData = JSON.stringify(item);
             console.log("Updating item with ID: " + item.id + " with data: " + jsonData);
@@ -168,6 +168,7 @@ async function editItem(event){
             printEditItemResponseMessage(response, responseData);
         }
         cells.forEach(cell => removeInputFromCell(cell, item));
+        //TODO: if update not successful, e.g. missing field, removeInputFromCell should display previous value.
     }
 }
 
@@ -179,6 +180,13 @@ function addInputToCell(cell, item){
         input.type = "text";
         input.value = value;
         input.style.width = "100%";
+        if(cell.name === "amount"){
+            input.type = "number";
+            input.min = "0";
+            input.addEventListener("input",function(){
+                this.value = Math.max(0,this.value);
+            });
+        }
         cell.appendChild(input);
     }
 }
@@ -207,7 +215,7 @@ function removeInputFromCell(cell, item){
     }
 }
 
-function updateItem(item, cells){
+function syncItemWithCell(item, cells){
     for(const cell of cells){
         if(cell.type === "field"){
             item[cell.name] = cell.querySelector("input").value.trim();

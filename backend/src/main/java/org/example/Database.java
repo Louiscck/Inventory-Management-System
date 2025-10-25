@@ -19,13 +19,13 @@ public class Database {
     }
 
     //just ensure the class and fields are annotated with the correct names according to the DB, reflection + annotation handles the mapping
-    public void writeToDB(Object object) throws Exception{
+    public void createResource(Object object) throws Exception{
         if(object.getClass().isAnnotationPresent(Table.class) == false){
             throw new IllegalArgumentException("This object's class has no mapping in the database");
         }
         Connection connection = DriverManager.getConnection(this.url, this.user, this.password);
-        PreparedStatement statement = buildWriteStatement(connection, object);
-        System.out.println("Writing to DB...");
+        PreparedStatement statement = buildCreateStatement(connection, object);
+        System.out.println("Creating resource in database...");
         statement.executeUpdate();
 
         ResultSet resultSet = statement.getGeneratedKeys();
@@ -33,7 +33,7 @@ public class Database {
         connection.close();
     }
 
-    private PreparedStatement buildWriteStatement(Connection connection, Object object) throws SQLException, IllegalAccessException{
+    private PreparedStatement buildCreateStatement(Connection connection, Object object) throws SQLException, IllegalAccessException{
         Table tableAnnotation = object.getClass().getAnnotation(Table.class);
         Field[] fields = object.getClass().getDeclaredFields();
         ArrayList<String> fieldName = new ArrayList<>();
@@ -90,13 +90,13 @@ public class Database {
         }
     }
 
-    public <T> ArrayList<T> readFromDB(String keyword, Class<T> classType) throws Exception{
+    public <T> ArrayList<T> readResource(String keyword, Class<T> classType) throws Exception{
         if(classType.isAnnotationPresent(Table.class) == false) {
             throw new IllegalArgumentException("The class is not mapped to a table in the database");
         }
         Connection connection = DriverManager.getConnection(this.url, this.user, this.password);
         PreparedStatement readStatement = buildReadStatement(connection, keyword, classType);
-        System.out.println("Reading from DB...");
+        System.out.println("Reading resource from database...");
         ResultSet resultSet = readStatement.executeQuery();
         ArrayList<T> list = convertToListOfClass(resultSet, classType);
         return list;
@@ -156,14 +156,14 @@ public class Database {
         return list;
     }
 
-    public <T> boolean deleteInDB(int id, Class<T> classType) throws SQLException{
+    public <T> boolean deleteResource(int id, Class<T> classType) throws SQLException{
         if(classType.isAnnotationPresent(Table.class) == false) {
             throw new IllegalArgumentException("The class is not mapped to a table in the database");
         }
         boolean isDeleteSuccess = true;
         Connection connection = DriverManager.getConnection(this.url, this.user, this.password);
         PreparedStatement deleteStatement = buildDeleteStatement(connection, id, classType);
-        System.out.println("Deleting in DB...");
+        System.out.println("Deleting resource in database...");
         int affectedRow = deleteStatement.executeUpdate();
         if(affectedRow == 0){
             isDeleteSuccess = false;
@@ -176,6 +176,53 @@ public class Database {
         String sql = "DELETE FROM " + tableAnnotation.name() + " WHERE id = ?";
         PreparedStatement statement = connection.prepareStatement(sql);
         statement.setObject(1, id);
+        return statement;
+    }
+
+    public boolean replaceResource(Object object, int id) throws Exception{
+        if(object.getClass().isAnnotationPresent(Table.class) == false){
+            throw new IllegalArgumentException("This object's class has no mapping in the database");
+        }
+        boolean isUpdateSuccess = true;
+        Connection connection = DriverManager.getConnection(this.url, this.user, this.password);
+        PreparedStatement deleteStatement = buildReplaceStatement(connection, object, id);
+        System.out.println("Replacing resource in database...");
+        int affectedRow = deleteStatement.executeUpdate();
+        if(affectedRow == 0){
+            isUpdateSuccess = false;
+        }
+        return isUpdateSuccess;
+    }
+
+    private PreparedStatement buildReplaceStatement(Connection connection, Object object, int id) throws Exception{
+        Table tableAnnotation = object.getClass().getAnnotation(Table.class);
+        Field[] fields = object.getClass().getDeclaredFields();
+        ArrayList<String> fieldName = new ArrayList<>();
+        ArrayList<Object> fieldValue = new ArrayList<>();
+        for(Field field: fields){
+            if(field.isAnnotationPresent(Column.class) && !field.isAnnotationPresent(PrimaryKey.class)){ //check PK to ignore item id
+                field.setAccessible(true);
+                fieldName.add(field.getAnnotation(Column.class).name());
+                if(field.getType() == String.class){
+                    fieldValue.add(field.get(object).toString().trim());
+                } else {
+                    fieldValue.add(field.get(object));
+                }
+            }
+        }
+
+        String url = "UPDATE " + tableAnnotation.name() + " SET ";
+        for(String name: fieldName){
+            url += name + "=?, ";
+        }
+        url = url.substring(0, url.length()-2);
+        url += " WHERE id = ?;";
+
+        PreparedStatement statement = connection.prepareStatement(url);
+        for(int i=0; i<fieldValue.size(); i++){
+            statement.setObject(i+1, fieldValue.get(i));
+        }
+        statement.setObject(fieldValue.size()+1, id);
         return statement;
     }
 }

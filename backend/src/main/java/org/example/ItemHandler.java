@@ -46,6 +46,9 @@ public class ItemHandler implements HttpHandler {
                 case "DELETE":
                     deleteItem(exchange);
                     break;
+                case "PUT":
+                    replaceItem(exchange);
+                    break;
             }
         } catch (Exception e){
             e.printStackTrace();
@@ -124,82 +127,128 @@ public class ItemHandler implements HttpHandler {
         if(!isBadCreateRequest(requestJson, errorResponse)){
             Gson gson = new Gson();
             Item item = gson.fromJson(requestJson, Item.class);
-            this.database.writeToDB(item);
+            this.database.createResource(item);
             errorResponse.setStatusCode(201);
             exchange.getResponseHeaders().add("Location", "/item/" + item.getId());
         }
         sendResponse(exchange, errorResponse.getStatusCode(), errorResponse);
     }
 
-    private boolean isBadCreateRequest(String json, ErrorResponse errorResponse){
+    private boolean isBadCreateRequest(String json, ErrorResponse errorResponse) throws Exception{
         ObjectMapper objectMapper = new ObjectMapper();
-        try{
-            JsonNode jsonNode = objectMapper.readTree(json);
-            String[] requiredField = {"name", "category", "specification", "unit", "amount"};
+        JsonNode jsonNode = objectMapper.readTree(json);
+        JsonNode amountNode = jsonNode.get("amount");
+        return isFieldMissing(jsonNode, errorResponse) || !isPositiveNumber(amountNode, errorResponse);
+    }
 
-            for(String field: requiredField){
-                if(!jsonNode.hasNonNull(field) || jsonNode.get(field).asText().trim().isEmpty()){
-                    errorResponse.setStatusCode(400);
-                    errorResponse.setErrorMessage("Missing fields. Please fill up the form.");
-                    return true;
-                }
-            }
-
-            JsonNode amountNode = jsonNode.get("amount");
-            int amount;
-            try{
-                if(amountNode.isNumber()){
-                    amount = amountNode.asInt();
-                } else if (amountNode.isTextual()){
-                    amount = Integer.parseInt(amountNode.asText().trim());
-                } else {
-                    throw new NumberFormatException();
-                }
-            } catch (NumberFormatException e){
+    private boolean isFieldMissing(JsonNode jsonNode, ErrorResponse errorResponse){
+        String[] requiredField = {"name", "category", "specification", "unit", "amount"};
+        for(String field: requiredField){
+            if(!jsonNode.hasNonNull(field) || jsonNode.get(field).asText().trim().isEmpty()){
                 errorResponse.setStatusCode(400);
-                errorResponse.setErrorMessage("Amount has to be number.");
+                errorResponse.setErrorMessage("Missing fields. Please fill up the form.");
                 return true;
             }
-
-            if (amount < 0){
-                errorResponse.setStatusCode(400);
-                errorResponse.setErrorMessage("Amount must be bigger than 0.");
-                return true;
-            }
-        } catch (Exception e){
-            e.printStackTrace();
         }
         return false;
     }
 
+    private boolean isPositiveNumber(JsonNode amountNode,ErrorResponse errorResponse){
+        int amount;
+        try{
+            if(amountNode.isNumber()){
+                amount = amountNode.asInt();
+            } else if (amountNode.isTextual()){ //Textual non-number (e.g. "hi") throws NumberFormatException()
+                amount = Integer.parseInt(amountNode.asText().trim());
+            } else { //special character
+                throw new NumberFormatException();
+            }
+        } catch (NumberFormatException e){
+            errorResponse.setStatusCode(400);
+            errorResponse.setErrorMessage("Amount has to be number.");
+            return false;
+        }
+
+        if (amount < 0){
+            errorResponse.setStatusCode(400);
+            errorResponse.setErrorMessage("Amount must be bigger than 0.");
+            return false;
+        }
+        return true;
+    }
+
     private void getItem(HttpExchange exchange, String keyword) throws Exception{
-        ArrayList<Item> itemList = this.database.readFromDB(keyword, Item.class);
+        ArrayList<Item> itemList = this.database.readResource(keyword, Item.class);
         sendResponse(exchange,200, itemList);
     }
 
     private void deleteItem(HttpExchange exchange) throws Exception{
         String idString = exchange.getRequestURI().getPath().split("/")[2];
-        if(isBadDeleteRequest(idString, exchange)){
+        ErrorResponse errorResponse = new ErrorResponse();
+        if(isBadDeleteRequest(idString, errorResponse)){
+            sendResponse(exchange, errorResponse.getStatusCode(), errorResponse);
             return;
         }
         int id = Integer.parseInt(idString);
-        boolean isSuccess = this.database.deleteInDB(id, Item.class);
+        boolean isSuccess = this.database.deleteResource(id, Item.class);
         if(isSuccess){
             sendResponse(exchange, 204, null);
         } else {
-            ErrorResponse errorResponse = new ErrorResponse(404, "Item not found in database.");
+            errorResponse.setStatusCode(404);
+            errorResponse.setErrorMessage("Item not found in database.");
             sendResponse(exchange, errorResponse.getStatusCode(), errorResponse);
         }
     }
 
-    private boolean isBadDeleteRequest(String idString, HttpExchange exchange){
+    private boolean isBadDeleteRequest(String idString, ErrorResponse errorResponse){
+        return !isPositiveNumber(idString, errorResponse);
+    }
+
+    private boolean isPositiveNumber(String num, ErrorResponse errorResponse){
         try{
-            int id = Integer.parseInt(idString);
+            int id = Integer.parseInt(num);
+            if(id <= 0){
+                errorResponse.setStatusCode(400);
+                errorResponse.setErrorMessage("Item id must be larger than 0.");
+                return false;
+            }
         } catch (NumberFormatException e){
-            ErrorResponse errorResponse = new ErrorResponse(400, "Item id must be a number.");
-            sendResponse(exchange, errorResponse.getStatusCode(), errorResponse);
+            errorResponse.setStatusCode(400);
+            errorResponse.setErrorMessage("Item id must be a number.");
+            return false;
+        }
+        return true;
+    }
+
+    private void replaceItem(HttpExchange exchange) throws Exception{
+        InputStream is = exchange.getRequestBody();
+        String requestJson = new String(is.readAllBytes(), StandardCharsets.UTF_8);
+        ErrorResponse errorResponse = new ErrorResponse();
+        String idString = exchange.getRequestURI().getPath().split("/")[2];
+        if(!isBadReplaceRequest(requestJson, errorResponse, idString)){
+            int id = Integer.parseInt(idString);
+            Gson gson = new Gson();
+            Item item = gson.fromJson(requestJson, Item.class);
+            boolean isSuccess = this.database.replaceResource(item, id);
+            if(isSuccess){
+                sendResponse(exchange,204,null);
+                return;
+            } else {
+                errorResponse.setStatusCode(404);
+                errorResponse.setErrorMessage("Item not found in database.");
+            }
+        }
+        sendResponse(exchange, errorResponse.getStatusCode(), errorResponse);
+    }
+
+    private boolean isBadReplaceRequest(String json, ErrorResponse errorResponse, String idString) throws Exception{
+        //request json MAY contain the id, but for REST standard, the id should be in URI path, hence check id in idString instead of json
+        ObjectMapper objectMapper = new ObjectMapper();
+        JsonNode jsonNode = objectMapper.readTree(json);
+        JsonNode amountNode = jsonNode.get("amount");
+        if(!isPositiveNumber(idString, errorResponse)){
             return true;
         }
-        return false;
+        return isFieldMissing(jsonNode, errorResponse) || !isPositiveNumber(amountNode, errorResponse);
     }
 }
