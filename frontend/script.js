@@ -140,7 +140,7 @@ async function editItem(event){
     const button = event.currentTarget;
     const rowObject = button.rowObject;
     const row = rowObject.row;
-    const item = rowObject.item;
+    let item = rowObject.item;
     const cells = row.querySelectorAll("td");
     if(button.mode === "edit"){
         button.mode = "submit";
@@ -152,23 +152,25 @@ async function editItem(event){
         if(!isInputChanged(cells, item)){
             document.getElementById("delete-edit-item-text").innerText = "No changes detected.";
         } else {
-            syncItemWithCell(item, cells);
-            const url = "http://localhost:8080/item/" + item.id;
-            const jsonData = JSON.stringify(item);
-            console.log("Updating item with ID: " + item.id + " with data: " + jsonData);
+            const newItem = generateItemFromInput(item.id, cells);
+            const url = "http://localhost:8080/item/" + newItem.id;
+            const jsonData = JSON.stringify(newItem);
+            console.log("Updating item with ID: " + newItem.id + " with data: " + jsonData);
             const response = await fetch(url, {
                 method: "PUT",
                 headers: {"Content-Type": "application/json"},
                 body: jsonData
             })
             let responseData = null; //204 has no body, may cause error when calling response.json()
-            if(response.status != 204){
+            if(response.status !== 204){
                 responseData = await response.json();
+            } else {
+                item = Object.assign(item, newItem); 
+                //update local item only if update successful so that restoreCellDisplay works correctly
             }
             printEditItemResponseMessage(response, responseData);
         }
-        cells.forEach(cell => removeInputFromCell(cell, item));
-        //TODO: if update not successful, e.g. missing field, removeInputFromCell should display previous value.
+        cells.forEach(cell => restoreCellDisplay(cell, item));
     }
 }
 
@@ -209,13 +211,15 @@ function isInputChanged(cells, item){
     return changed;
 }
 
-function removeInputFromCell(cell, item){
+function restoreCellDisplay(cell, item){
     if(cell.type === "field"){
         cell.textContent = item[cell.name];
     }
 }
 
-function syncItemWithCell(item, cells){
+function generateItemFromInput(id, cells){
+    const item = {};
+    item.id = id;
     for(const cell of cells){
         if(cell.type === "field"){
             item[cell.name] = cell.querySelector("input").value.trim();
@@ -224,6 +228,8 @@ function syncItemWithCell(item, cells){
             }
         }
     }
+    console.log("Generated item = " + JSON.stringify(item));
+    return item;
 }
 
 function printEditItemResponseMessage(response, responseData){
