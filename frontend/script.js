@@ -19,10 +19,10 @@ async function addItem(){
         headers: {"Content-Type": "application/json"},
         body: jsonData
     })
-    if(response.status == 204){
-        return; //has no body, may cause error when calling response.json()
+    let responseData = null;
+    if(response.status !== 201){
+        responseData = await response.json(); //201 has no body, may cause error when calling response.json()
     }
-    const responseData = await response.json();
     printAddItemResponseMessage(response, responseData);
 }
 
@@ -52,11 +52,11 @@ async function getItem(){
 
     const url = "http://localhost:8080/item?" + queryString;
     const response = await fetch(url);
-    if(response.status == 204){
+    if(response.status === 204){
         return; //has no body, may cause error when calling response.json()
     }
     const responseData = await response.json();
-    if(response.status == 200){
+    if(response.status === 200){
         displayItemTable(responseData);
     }
     printGetItemResponseMessage(response, responseData);
@@ -109,11 +109,11 @@ async function deleteItem(event){
         method: "DELETE",
     })
     let responseData = null; //204 has no body, may cause error when calling response.json()
-    if(response.status != 204){
+    if(response.status !== 204){
         responseData = await response.json();
     }
     printDeleteItemResponseMessage(response, responseData);
-    if(response.status == 204){
+    if(response.status === 204){
         const table = document.querySelector("#display-item-table tbody");
         table.removeChild(rowObject.row);
     }

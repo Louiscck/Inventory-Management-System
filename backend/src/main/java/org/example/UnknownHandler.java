@@ -8,33 +8,14 @@ import java.io.IOException;
 import java.io.OutputStream;
 
 public class UnknownHandler implements HttpHandler {
+    private HttpResponseHandler responseHandler;
     @Override
-    public void handle(HttpExchange exchange) throws IOException {
+    public void handle(HttpExchange exchange){
+        this.responseHandler = new HttpResponseHandler(exchange);
         if(exchange.getRequestMethod().equalsIgnoreCase("OPTIONS")){
-            handleCors(exchange);
+            this.responseHandler.handleCors();
         } else {
-            ErrorResponse response = new ErrorResponse(404,"Page not found (endpoint doesn't exist).");
-            Gson gson = new Gson();
-            String responseJson = gson.toJson(response);
-            exchange.getResponseHeaders().add("Access-Control-Allow-Origin", "*");
-            exchange.getResponseHeaders().add("Content-Type", "application/json");
-            exchange.sendResponseHeaders(response.getStatusCode(), responseJson.getBytes().length);
-            OutputStream os = exchange.getResponseBody();
-            os.write(responseJson.getBytes());
-            os.close();
-            exchange.close();
-        }
-    }
-
-    private void handleCors(HttpExchange exchange){
-        try{
-            exchange.getResponseHeaders().add("Access-Control-Allow-Origin", "*");
-            exchange.getResponseHeaders().add("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE");
-            exchange.getResponseHeaders().add("Access-Control-Allow-Headers", "Content-Type");
-            exchange.sendResponseHeaders(204, -1); // No response body
-            exchange.close();
-        } catch (IOException e){
-            e.printStackTrace();
+            this.responseHandler.sendResponse(404,"Page not found (endpoint doesn't exist).");
         }
     }
 }

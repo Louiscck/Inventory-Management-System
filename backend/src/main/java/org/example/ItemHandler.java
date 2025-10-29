@@ -18,6 +18,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 
 public class ItemHandler implements HttpHandler {
     private Database database;
+    private HttpResponseHandler responseHandler;
     ItemHandler(Database database){
         this.database = database;
     }
@@ -25,14 +26,15 @@ public class ItemHandler implements HttpHandler {
     @Override
     public void handle(HttpExchange exchange){
         try {
+            this.responseHandler = new HttpResponseHandler(exchange);
             String method = exchange.getRequestMethod();
             System.out.println("Received HTTP request: " + method);
             if(method.equals("OPTIONS")){
-                handleCors(exchange);
+                this.responseHandler.handleCors();
                 return;
             }
             if(!exchange.getRequestURI().getPath().split("/")[1].equals("item")){
-                sendNotFound(exchange);
+                this.responseHandler.sendNotFound();
                 return;
             }
             switch (method) {
@@ -52,9 +54,7 @@ public class ItemHandler implements HttpHandler {
             }
         } catch (Exception e){
             e.printStackTrace();
-            sendInternalServerError(exchange);
-        } finally {
-            exchange.close();
+            this.responseHandler.sendInternalServerError();
         }
     }
 
@@ -73,14 +73,13 @@ public class ItemHandler implements HttpHandler {
         if(queryMap.size() == 1 && queryMap.containsKey("search")){ //for now, only implement single keyword search {search= x}
             getItem(exchange, queryMap.get("search").trim());
         } else {
-            ErrorResponse errorResponse = new ErrorResponse(400, "Bad request, query not allowed or not matched.");
-            sendResponse(exchange, errorResponse.getStatusCode(), errorResponse);
+            this.responseHandler.sendResponse(400, "Bad request, query not allowed or not matched.");
         }
         //eventhough now only has single keyword search at frontend, using hashmap facilitate expansion for multi keyword search
     }
 
     //TODO: wrap sendInternalServerError, handleCors, sendNotFound, and sendResponse in another class
-    private void sendInternalServerError(HttpExchange exchange){
+    /*private void sendInternalServerError(HttpExchange exchange){
         ErrorResponse errorResponse = new ErrorResponse(500, "Internal server error.");
         sendResponse(exchange, errorResponse.getStatusCode(), errorResponse);
     }
@@ -118,42 +117,40 @@ public class ItemHandler implements HttpHandler {
         } catch (IOException e){
             e.printStackTrace();
         }
-    }
+    }*/
 
     private void createItem(HttpExchange exchange) throws Exception{
         InputStream is = exchange.getRequestBody();
         String requestJson = new String(is.readAllBytes(), StandardCharsets.UTF_8);
-        ErrorResponse errorResponse = new ErrorResponse();
-        if(!isBadCreateRequest(requestJson, errorResponse)){
-            Gson gson = new Gson();
-            Item item = gson.fromJson(requestJson, Item.class);
-            this.database.createResource(item);
-            errorResponse.setStatusCode(201);
-            exchange.getResponseHeaders().add("Location", "/item/" + item.getId());
+        if(isBadCreateRequest(requestJson)){
+            return;
         }
-        sendResponse(exchange, errorResponse.getStatusCode(), errorResponse);
+        Gson gson = new Gson();
+        Item item = gson.fromJson(requestJson, Item.class);
+        this.database.createResource(item);
+        exchange.getResponseHeaders().add("Location", "/item/" + item.getId());
+        this.responseHandler.sendResponse(201, null);
     }
 
-    private boolean isBadCreateRequest(String json, ErrorResponse errorResponse) throws Exception{
+    private boolean isBadCreateRequest(String json) throws Exception{
         ObjectMapper objectMapper = new ObjectMapper();
         JsonNode jsonNode = objectMapper.readTree(json);
         JsonNode amountNode = jsonNode.get("amount");
-        return isFieldMissing(jsonNode, errorResponse) || !isPositiveNumber(amountNode, errorResponse);
+        return isFieldMissing(jsonNode) || !isPositiveNumber(amountNode);
     }
 
-    private boolean isFieldMissing(JsonNode jsonNode, ErrorResponse errorResponse){
+    private boolean isFieldMissing(JsonNode jsonNode){
         String[] requiredField = {"name", "category", "specification", "unit", "amount"};
         for(String field: requiredField){
             if(!jsonNode.hasNonNull(field) || jsonNode.get(field).asText().trim().isEmpty()){
-                errorResponse.setStatusCode(400);
-                errorResponse.setErrorMessage("Missing fields. Please fill up the form.");
+                this.responseHandler.sendResponse(400, "Missing fields. Please fill up the form.");
                 return true;
             }
         }
         return false;
     }
 
-    private boolean isPositiveNumber(JsonNode amountNode,ErrorResponse errorResponse){
+    private boolean isPositiveNumber(JsonNode amountNode){
         int amount;
         try{
             if(amountNode.isNumber()){
@@ -164,14 +161,12 @@ public class ItemHandler implements HttpHandler {
                 throw new NumberFormatException();
             }
         } catch (NumberFormatException e){
-            errorResponse.setStatusCode(400);
-            errorResponse.setErrorMessage("Amount has to be number.");
+            this.responseHandler.sendResponse(400, "Amount has to be number.");
             return false;
         }
 
         if (amount < 0){
-            errorResponse.setStatusCode(400);
-            errorResponse.setErrorMessage("Amount must be bigger than 0.");
+            this.responseHandler.sendResponse(400, "Amount must be bigger than 0.");
             return false;
         }
         return true;
@@ -179,42 +174,36 @@ public class ItemHandler implements HttpHandler {
 
     private void getItem(HttpExchange exchange, String keyword) throws Exception{
         ArrayList<Item> itemList = this.database.readResource(keyword, Item.class);
-        sendResponse(exchange,200, itemList);
+        this.responseHandler.sendResponse(200, itemList);
     }
 
     private void deleteItem(HttpExchange exchange) throws Exception{
         String idString = exchange.getRequestURI().getPath().split("/")[2];
-        ErrorResponse errorResponse = new ErrorResponse();
-        if(isBadDeleteRequest(idString, errorResponse)){
-            sendResponse(exchange, errorResponse.getStatusCode(), errorResponse);
+        if(isBadDeleteRequest(idString)){
             return;
         }
         int id = Integer.parseInt(idString);
         boolean isSuccess = this.database.deleteResource(id, Item.class);
         if(isSuccess){
-            sendResponse(exchange, 204, null);
+            this.responseHandler.sendResponse(204, null);
         } else {
-            errorResponse.setStatusCode(404);
-            errorResponse.setErrorMessage("Item not found in database.");
-            sendResponse(exchange, errorResponse.getStatusCode(), errorResponse);
+            this.responseHandler.sendResponse(404, "Item not found in database.");
         }
     }
 
-    private boolean isBadDeleteRequest(String idString, ErrorResponse errorResponse){
-        return !isPositiveNumber(idString, errorResponse);
+    private boolean isBadDeleteRequest(String idString){
+        return !isPositiveNumber(idString);
     }
 
-    private boolean isPositiveNumber(String num, ErrorResponse errorResponse){
+    private boolean isPositiveNumber(String num){
         try{
             int id = Integer.parseInt(num);
             if(id <= 0){
-                errorResponse.setStatusCode(400);
-                errorResponse.setErrorMessage("Item id must be larger than 0.");
+                this.responseHandler.sendResponse(400, "Item id must be larger than 0.");
                 return false;
             }
         } catch (NumberFormatException e){
-            errorResponse.setStatusCode(400);
-            errorResponse.setErrorMessage("Item id must be a number.");
+            this.responseHandler.sendResponse(400, "Item id must be a number.");
             return false;
         }
         return true;
@@ -223,32 +212,29 @@ public class ItemHandler implements HttpHandler {
     private void replaceItem(HttpExchange exchange) throws Exception{
         InputStream is = exchange.getRequestBody();
         String requestJson = new String(is.readAllBytes(), StandardCharsets.UTF_8);
-        ErrorResponse errorResponse = new ErrorResponse();
         String idString = exchange.getRequestURI().getPath().split("/")[2];
-        if(!isBadReplaceRequest(requestJson, errorResponse, idString)){
-            int id = Integer.parseInt(idString);
-            Gson gson = new Gson();
-            Item item = gson.fromJson(requestJson, Item.class);
-            boolean isSuccess = this.database.replaceResource(item, id);
-            if(isSuccess){
-                sendResponse(exchange,204,null);
-                return;
-            } else {
-                errorResponse.setStatusCode(404);
-                errorResponse.setErrorMessage("Item not found in database.");
-            }
+        if(isBadReplaceRequest(requestJson, idString)){
+            return;
         }
-        sendResponse(exchange, errorResponse.getStatusCode(), errorResponse);
+        int id = Integer.parseInt(idString);
+        Gson gson = new Gson();
+        Item item = gson.fromJson(requestJson, Item.class);
+        boolean isSuccess = this.database.replaceResource(item, id);
+        if(isSuccess){
+            this.responseHandler.sendResponse(204,null);
+        } else {
+            this.responseHandler.sendResponse(404, "Item not found in database.");
+        }
     }
 
-    private boolean isBadReplaceRequest(String json, ErrorResponse errorResponse, String idString) throws Exception{
+    private boolean isBadReplaceRequest(String json, String idString) throws Exception{
         //request json MAY contain the id, but for REST standard, the id should be in URI path, hence check id in idString instead of json
         ObjectMapper objectMapper = new ObjectMapper();
         JsonNode jsonNode = objectMapper.readTree(json);
         JsonNode amountNode = jsonNode.get("amount");
-        if(!isPositiveNumber(idString, errorResponse)){
+        if(!isPositiveNumber(idString)){
             return true;
         }
-        return isFieldMissing(jsonNode, errorResponse) || !isPositiveNumber(amountNode, errorResponse);
+        return isFieldMissing(jsonNode) || !isPositiveNumber(amountNode);
     }
 }
