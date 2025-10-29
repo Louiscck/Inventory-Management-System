@@ -4,10 +4,7 @@ import com.google.gson.Gson;
 import com.sun.net.httpserver.HttpExchange;
 import com.sun.net.httpserver.HttpHandler;
 
-import java.io.IOException;
 import java.io.InputStream;
-import java.io.OutputStream;
-import java.lang.reflect.Field;
 import java.net.URLDecoder;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
@@ -77,47 +74,6 @@ public class ItemHandler implements HttpHandler {
         }
         //eventhough now only has single keyword search at frontend, using hashmap facilitate expansion for multi keyword search
     }
-
-    //TODO: wrap sendInternalServerError, handleCors, sendNotFound, and sendResponse in another class
-    /*private void sendInternalServerError(HttpExchange exchange){
-        ErrorResponse errorResponse = new ErrorResponse(500, "Internal server error.");
-        sendResponse(exchange, errorResponse.getStatusCode(), errorResponse);
-    }
-
-    private void handleCors(HttpExchange exchange){
-        exchange.getResponseHeaders().add("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE");
-        exchange.getResponseHeaders().add("Access-Control-Allow-Headers", "Content-Type");
-        sendResponse(exchange,204,null);
-    }
-
-    private void sendNotFound(HttpExchange exchange){
-        ErrorResponse errorResponse = new ErrorResponse(404, "Page not found (endpoint not found).");
-        sendResponse(exchange, errorResponse.getStatusCode(), errorResponse);
-    }
-
-    private void sendResponse(HttpExchange exchange, int code, Object body){
-        String message = "Sending response back to client..." + code;
-        if(body instanceof ErrorResponse){
-            message += " " + ((ErrorResponse) body).getErrorMessage();
-        }
-        System.out.println(message);
-        try{
-            exchange.getResponseHeaders().add("Access-Control-Allow-Origin", "*");
-            if(body == null){
-                exchange.sendResponseHeaders(code, -1); // No response body
-                return;
-            }
-            Gson gson = new Gson();
-            String bodyJson = gson.toJson(body);
-            exchange.getResponseHeaders().add("Content-Type", "application/json");
-            exchange.sendResponseHeaders(code, bodyJson.getBytes().length);
-            OutputStream os = exchange.getResponseBody();
-            os.write(bodyJson.getBytes());
-            os.close();
-        } catch (IOException e){
-            e.printStackTrace();
-        }
-    }*/
 
     private void createItem(HttpExchange exchange) throws Exception{
         InputStream is = exchange.getRequestBody();
