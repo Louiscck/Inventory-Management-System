@@ -10,7 +10,7 @@ A simple web app for inventory management, built for practice and portfolio purp
 
 ## Features
 - Basic CRUD operation, can add, edit, delete, and search items for managing an inventory.
-- Lightweight custom backend without frameworks.
+- Lightweight backend without frameworks.
 - Lightweight custom ORM.
 - Simple UI built with vanilla HTML, CSS, and JS
 
