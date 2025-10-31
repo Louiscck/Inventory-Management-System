@@ -3,10 +3,10 @@
 A simple web app for inventory management, built for practice and portfolio purpose. Main purpose is to learn building from scratch and slowly upgrading with frameworks.
 
 ## Tech Stack
-**Frontend:** HTML, CSS, JavaScript, Fetch API
-**Backend:** Java, HttpServer, REST API, JDBC
-**Database:** MySQL
-**IDE/Tool:** VSCode, IntelliJ, MySQL Workbench, GitHub, Postman
+- **Frontend:** HTML, CSS, JavaScript, Fetch API
+- **Backend:** Java, HttpServer, REST API, JDBC
+- **Database:** MySQL
+- **IDE/Tool:** VSCode, IntelliJ, MySQL Workbench, GitHub, Postman
 
 ## Features
 - Basic CRUD operation, can add, edit, delete, and search items for managing an inventory.
