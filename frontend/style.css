@@ -46,6 +46,10 @@ thead{
     background-color: lightgray;
 }
 
+tbody{
+    background-color: white;
+}
+
 #display-item-table-div{
     width: 70vw;
     margin: auto;
@@ -53,4 +57,21 @@ thead{
 
 #delete-edit-item-text{
     margin: 0px;
+}
+
+body {
+  background-image: url("warehouse.jpeg");
+  background-repeat: no-repeat;   /* prevents tiling */
+  background-size: cover;         /* scales image to fill screen */
+  background-position: center;    /* centers the image */
+  background-attachment: fixed;   /* optional: makes it stay in place when scrolling */
+}
+
+#background-div {
+  background: rgba(255, 255, 255, 0.6);
+  backdrop-filter: blur(10px);          
+  border-radius: 16px;                
+  width: 70vw;  
+  padding: 2rem;           
+  margin: 2rem auto;
 }
