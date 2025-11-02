@@ -17,10 +17,12 @@ public class Main {
                 url = properties.getProperty("db.url");
                 user = properties.getProperty("db.user");
                 password = properties.getProperty("db.password");
+                System.out.println("Using local DB");
             } else { //for deployment, reads from Render's environment variables
                 url = System.getenv("DB_URL");
                 user = System.getenv("DB_USER");
                 password = System.getenv("DB_PASSWORD");
+                System.out.println("Using cloud DB");
             }
         } catch(IOException e){
             e.printStackTrace();
