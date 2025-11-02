@@ -6,10 +6,12 @@ export default class RowObject{
     deleteButton;
     submitButton;
     cancelButton;
+    serverUrl;
 
-    constructor(item, fieldNameOrder){
+    constructor(item, fieldNameOrder, serverUrl){
         this.item = item;
         this.fieldNameOrder = fieldNameOrder;
+        this.serverUrl = serverUrl;
         this.editButton = this.createButton("bi bi-pencil-fill", this.switchToEditMode); //bootstrap edit icon
         this.deleteButton = this.createButton("bi bi-trash-fill", this.deleteItem); //bootstrap delete icon
         this.submitButton = this.createButton("bi bi-check2-all", this.editItem); //bootstrap submit icon
@@ -53,7 +55,7 @@ export default class RowObject{
             return;
         }
 
-        const url = "http://localhost:8080/item/" + this.item.id;
+        const url = this.serverUrl + "/item/" + this.item.id;
         console.log("Deleting item with ID: " + this.item.id);
         const response = await fetch(url, {
             method: "DELETE",
@@ -144,7 +146,7 @@ export default class RowObject{
             document.getElementById("delete-edit-item-text").innerText = "No changes detected.";
             return;
         }
-        const url = "http://localhost:8080/item/" + newItem.id;
+        const url = this.serverUrl + "/item/" + newItem.id;
         const jsonData = JSON.stringify(newItem);
         console.log("Updating item with ID: " + newItem.id + " with data: " + jsonData);
         const response = await fetch(url, {

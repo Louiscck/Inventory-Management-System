@@ -6,6 +6,8 @@ document.getElementById("amount-input").addEventListener("input", function(){
     this.value = Math.max(0,this.value);
 });
 
+const serverUrl = "https://inventory-management-system-znti.onrender.com";
+
 async function addItem(event){
     event.preventDefault();
     const form = document.getElementById("add-item-form");
@@ -14,7 +16,7 @@ async function addItem(event){
     const jsonData = JSON.stringify(data);
     console.log("Creating resource: "+jsonData);
 
-    const url = "http://localhost:8080/item";
+    const url = serverUrl + "/item";
     const response = await fetch(url, {
         method: "POST",
         headers: {"Content-Type": "application/json"},
@@ -52,7 +54,7 @@ async function getItem(event){
     const queryString = new URLSearchParams(data).toString();
     console.log("Search keyword: " + queryString);
 
-    const url = "http://localhost:8080/item?" + queryString;
+    const url = serverUrl + "/item?" + queryString;
     const response = await fetch(url);
     if(response.status === 204){
         return; //has no body, may cause error when calling response.json()
@@ -73,7 +75,7 @@ function displayItemTable(responseData){
 }
 
 function addRow(table, item, fieldOrder) {
-    const rowObject = new RowObject(item, fieldOrder);
+    const rowObject = new RowObject(item, fieldOrder, serverUrl);
     table.appendChild(rowObject.row);
 }
 
