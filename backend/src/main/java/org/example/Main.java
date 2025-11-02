@@ -9,17 +9,30 @@ import java.util.Properties;
 
 public class Main {
     public static void main(String[] args) throws IOException {
-        Properties properties = new Properties();
+        String url = "", user = "", password = "";
         try(InputStream is = Main.class.getResourceAsStream("/config.properties")){
-            if(is == null){
-                System.out.println("config file not found.");
-                return;
+            if(is != null){ //for local testing
+                Properties properties = new Properties();
+                properties.load(is);
+                url = properties.getProperty("db.url");
+                user = properties.getProperty("db.user");
+                password = properties.getProperty("db.password");
+            } else { //for deployment, reads from Render's environment variables
+                url = System.getenv("DB_URL");
+                user = System.getenv("DB_USER");
+                password = System.getenv("DB_PASSWORD");
             }
-            properties.load(is);
+        } catch(IOException e){
+            e.printStackTrace();
+            System.out.println("Error loading config.properties.");
+            return;
         }
-        String url = properties.getProperty("db.url");
-        String user = properties.getProperty("db.user");
-        String password = properties.getProperty("db.password");
+
+        if(url.isEmpty() || url == null || user.isEmpty() || user == null || password.isEmpty() || password == null){
+            System.out.println("Cannot get database credentials.");
+            return;
+        }
+
         Database database = new Database(url, user, password);
 
         HttpServer server = HttpServer.create(new InetSocketAddress(8080), 0);
