@@ -19,7 +19,10 @@ public class Main {
                 password = properties.getProperty("db.password");
                 System.out.println("Using local DB");
             } else { //for deployment, reads from Render's environment variables
-                url = System.getenv("DB_URL");
+                String host = System.getenv("DB_HOST");
+                String port = System.getenv("DB_PORT");
+                String dbName   = System.getenv("DB_NAME");
+                url = "jdbc:mysql://" + host + ":" + port + "/" + dbName + "?useSSL=false&allowPublicKeyRetrieval=true";
                 user = System.getenv("DB_USER");
                 password = System.getenv("DB_PASSWORD");
                 System.out.println("Using cloud DB");
@@ -38,6 +41,7 @@ public class Main {
         Database database = new Database(url, user, password);
 
         int port = Integer.parseInt(System.getenv().getOrDefault("PORT", "8080"));
+        System.out.println("Port = " + port);
         HttpServer server = HttpServer.create(new InetSocketAddress(port), 0);
         server.createContext("/item", new ItemHandler(database));
         server.createContext("/", new UnknownHandler());

@@ -7,6 +7,7 @@ document.getElementById("amount-input").addEventListener("input", function(){
 });
 
 const serverUrl = "https://inventory-management-system-znti.onrender.com";
+//const serverUrl = "http://localhost:8080";
 
 async function addItem(event){
     event.preventDefault();
