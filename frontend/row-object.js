@@ -57,9 +57,16 @@ export default class RowObject{
 
         const url = this.serverUrl + "/item/" + this.item.id;
         console.log("Deleting item with ID: " + this.item.id);
-        const response = await fetch(url, {
-            method: "DELETE",
-        })
+        this.addSpinner("delete-edit-item-text");
+        let response;
+        try{
+            response = await fetch(url, {
+                method: "DELETE",
+            })
+        } catch(error) {
+            document.getElementById("delete-edit-item-text").innerText = "Error connecting to server.";
+            return;
+        }
         let responseData = null; //204 has no body, may cause error when calling response.json()
         if(response.status !== 204){
             responseData = await response.json();
@@ -149,11 +156,18 @@ export default class RowObject{
         const url = this.serverUrl + "/item/" + newItem.id;
         const jsonData = JSON.stringify(newItem);
         console.log("Updating item with ID: " + newItem.id + " with data: " + jsonData);
-        const response = await fetch(url, {
-            method: "PUT",
-            headers: {"Content-Type": "application/json"},
-            body: jsonData
-        })
+        this.addSpinner("delete-edit-item-text");
+        let response;
+        try{
+            response = await fetch(url, {
+                method: "PUT",
+                headers: {"Content-Type": "application/json"},
+                body: jsonData
+            })
+        } catch(error) {
+            document.getElementById("delete-edit-item-text").innerText = "Error connecting to server.";
+            return;
+        }
         let responseData = null; //204 has no body, may cause error when calling response.json()
         if(response.status !== 204){
             responseData = await response.json();
@@ -203,5 +217,18 @@ export default class RowObject{
             default:
                 textObj.innerText = "Unexpected error occurred.";
         }
+    }
+
+    createSpinner() {
+        //loading icon that spins
+        const spinner = document.createElement('div');
+        spinner.classList.add('spinner');
+        return spinner;
+    }
+
+    addSpinner(elementId){
+        const element = document.getElementById(elementId);
+        element.innerText = "";
+        element.appendChild(this.createSpinner());
     }
 }

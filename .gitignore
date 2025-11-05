@@ -3,6 +3,7 @@ target/
 !**/src/main/**/target/
 !**/src/test/**/target/
 backend/src/main/resources/config.properties
+Hosting Service Limitation.txt
 
 ### IntelliJ IDEA ###
 .idea/modules.xml

@@ -32,4 +32,4 @@ db.password=*insert your DB password here*
 - Open the frontend html file on your browser, double click index.html in /frontend
 
 ## Website Link
-- Not yet host publicly
+https://inventory-ms-demo.netlify.app/

@@ -4,11 +4,22 @@
         <script type="module" src="script.js" defer></script>
         <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css">
         <link rel="icon" type="image/png" href="favicon.png">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
     </head>
 
     <body>
         <div id="background-div">
         <h1> Inventory Management System </h1>
+        <div id="introduction-paragraph">
+            <p> This is a simple web app built as a portfolio project, so functionality is limited as of now. This web 
+                app provides basic CRUD operation to create, read, update, and delete items for inventory management. 
+                The "About Me" section includes information about the author like resume and GitHub link. </p>
+        </div>
+        
+        <p id="server-loading-text"> The server is hosted for free, so it may take up to 1 minute to wake up after inactivity, please be patient: </p>
+        <div id="spinner-div">
+            <p id="server-wake-up-status-text"> </p>
+        </div>
 
         <form id="add-item-form">
         <table>
@@ -31,9 +42,9 @@
                 </tr>
             </tbody>
         </table>
-        <div id="add-item-button-div">
+        <div id="add-item-div">
             <button id="add-item-button">Add Item</button>
-            <p id="add-item-button-text"></p>
+            <p id="add-item-text"></p>
         </div>
         </form>
     

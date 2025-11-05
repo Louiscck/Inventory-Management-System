@@ -9,6 +9,21 @@ import java.util.Properties;
 
 public class Main {
     public static void main(String[] args) throws IOException {
+        Database database = initialiseDatabase();
+        if(database == null){
+            return;
+        }
+
+        int port = Integer.parseInt(System.getenv().getOrDefault("PORT", "8080"));
+        System.out.println("Port = " + port);
+        HttpServer server = HttpServer.create(new InetSocketAddress(port), 0);
+        server.createContext("/item", new ItemHandler(database));
+        server.createContext("/ping", new PingHandler());
+        server.createContext("/", new UnknownHandler());
+        server.start();
+    }
+
+    private static Database initialiseDatabase(){
         String url = "", user = "", password = "";
         try(InputStream is = Main.class.getResourceAsStream("/config.properties")){
             if(is != null){ //for local testing
@@ -30,21 +45,14 @@ public class Main {
         } catch(IOException e){
             e.printStackTrace();
             System.out.println("Error loading config.properties.");
-            return;
+            return null;
         }
 
         if(url.isEmpty() || url == null || user.isEmpty() || user == null || password.isEmpty() || password == null){
             System.out.println("Cannot get database credentials.");
-            return;
+            return null;
         }
 
-        Database database = new Database(url, user, password);
-
-        int port = Integer.parseInt(System.getenv().getOrDefault("PORT", "8080"));
-        System.out.println("Port = " + port);
-        HttpServer server = HttpServer.create(new InetSocketAddress(port), 0);
-        server.createContext("/item", new ItemHandler(database));
-        server.createContext("/", new UnknownHandler());
-        server.start();
+        return new Database(url, user, password);
     }
 }
