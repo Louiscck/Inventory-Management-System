@@ -38,12 +38,12 @@ export default class RowObject{
         cell.textContent = this.item[fieldName];
         cell.type = "field";
         cell.name = fieldName;
+        cell.dataset.label = fieldName.charAt(0).toUpperCase() + fieldName.slice(1);
         return cell;
     }
 
     createButtonCell(button){
         const cell = document.createElement("td");
-        cell.style.width = "2vw";
         cell.appendChild(button);
         cell.type = "button";
         return cell;
@@ -112,7 +112,6 @@ export default class RowObject{
                 const input = document.createElement("input");
                 input.type = "text";
                 input.value = value;
-                input.style.width = "100%";
                 if(cell.name === "amount"){
                     input.type = "number";
                     input.min = "0";

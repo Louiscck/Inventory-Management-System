@@ -1,9 +1,5 @@
 import RowObject from './row-object.js';
 
-//TODO 
-
-//6. Add section for my resume link and github link
-
 document.getElementById("add-item-button").addEventListener("click", addItem);
 document.getElementById("get-item-button").addEventListener("click", getItem);
 document.getElementById("amount-input").addEventListener("input", function(){
@@ -18,7 +14,7 @@ async function wakeUpServer(){ //server wakey wakey, time to work
     //Hosting on Render free plan causes the server to sleep after 15 minutes of inactivity
     //sends a dummy request to wake up the server when the webpage is loading, server takes up to 1 min to wake up
     const text = document.getElementById("server-wake-up-status-text");
-    const spinnerDiv = document.getElementById("spinner-div");
+    const spinnerDiv = document.getElementById("status-div");
     const spinner = createSpinner();
     spinnerDiv.appendChild(spinner);
     text.innerText = "Waking up server, please wait...";

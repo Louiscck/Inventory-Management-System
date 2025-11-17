@@ -1,85 +1,108 @@
-<html>
-    <head>
-        <link rel="stylesheet" href="style.css">
-        <script type="module" src="script.js" defer></script>
-        <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css">
-        <link rel="icon" type="image/png" href="favicon.png">
-        <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    </head>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Inventory Management System</title>
+    <link rel="stylesheet" href="style.css">
+    <script type="module" src="script.js" defer></script>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css">
+    <link rel="icon" type="image/png" href="favicon.png">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+</head>
 
-    <body>
-        <div id="background-div">
-        <h1> Inventory Management System </h1>
-        <div id="introduction-paragraph">
-            <p> This is a simple web app built as a portfolio project, so functionality is limited as of now. This web 
-                app provides basic CRUD operation to create, read, update, and delete items for tracking an inventory.
-            </p>
-            <p>
-                Explore the source code on <a href = "https://github.com/Louiscck/Inventory-Management-System" target="_blank"> GitHub </a>
-            </p>
-            <p>
-                About the author: <a href = "Resume (Louis Chin).pdf" target="_blank"> Resume </a>
-            </p>
-        </div>
-        
-        <p id="server-loading-text"> The server is hosted for free, so it may take up to 1 minute to wake up after inactivity, please be patient: </p>
-        <div id="spinner-div">
-            <p id="server-wake-up-status-text"> </p>
-        </div>
+<body>
+    <div class="container">
+        <!-- Header -->
+        <header>
+            <h1>Inventory Management System</h1>
+        </header>
 
-        <form id="add-item-form">
-        <table>
-            <thead>
-                <tr>
-                    <td>Name</td>
-                    <td>Category</td>
-                    <td>Specification</td>
-                    <td>Unit</td>
-                    <td>Amount</td>
-                </tr>
-            </thead>
-            <tbody>
-                <tr>
-                    <td><input type="text" name="name"></td>
-                    <td><input type="text" name="category"></td>
-                    <td><input type="text" name="specification"></td>
-                    <td><input type="text" name="unit"></td>
-                    <td><input type="number" name="amount" min="0" id="amount-input"></td>
-                </tr>
-            </tbody>
-        </table>
-        <div id="add-item-div">
-            <button id="add-item-button">Add Item</button>
-            <p id="add-item-text"></p>
-        </div>
-        </form>
-    
+        <!-- Introduction -->
+        <section id="introduction-paragraph">
+            <p>This web app provides basic CRUD operations to create, read, update, and delete items for tracking an inventory.</p>
+        </section>
 
-        <div id="get-item-div">
-            <form id="get-item-form">
-                <input type="text" name="search">
-                <button id="get-item-button">Search Item</button>
+        <!-- Info Row -->
+        <section id="info-row">
+            <div class="info-card">
+                <h3>GitHub Repo</h3>
+                <a href="https://github.com/Louiscck/Inventory-Management-System" target="_blank"> View on GitHub</a>
+            </div>
+
+            <div class="info-card">
+                <h3>Author's Resume</h3>
+                <a href="Resume (Louis Chin).pdf" target="_blank">View Resume</a>
+            </div>
+
+            <div class="info-card tooltip" id="status-div">
+                <h3>Server Status</h3>
+                <p id="server-wake-up-status-text"></p>
+
+                <span class="tooltip-text">
+                    This server is hosted for free and may take up to 1 minute to wake up after inactivity.
+                </span>
+            </div>
+        </section>
+
+        <!-- Add Item Form -->
+        <section id="add-item-section">
+            <form id="add-item-form">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Name</th>
+                            <th>Category</th>
+                            <th>Specification</th>
+                            <th>Unit</th>
+                            <th>Amount</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td data-label="Name"><input type="text" name="name"></td>
+                            <td data-label="Category"><input type="text" name="category"></td>
+                            <td data-label="Specification"><input type="text" name="specification"></td>
+                            <td data-label="Unit"><input type="text" name="unit"></td>
+                            <td data-label="Amount"><input type="number" name="amount" min="0" id="amount-input"></td>
+                        </tr>
+                    </tbody>
+                </table>
+                <div id="add-item-div">
+                    <button id="add-item-button" type="submit">Add Item</button>
+                    <p id="add-item-text"></p>
+                </div>
             </form>
-            <p id="get-item-text"></p>
-        </div>
+        </section>
 
-        <div id="display-item-table-div">
-            <p id="delete-edit-item-text"></p>
+        <!-- Search Item Form -->
+        <section id="get-item-section">
+            <form id="get-item-form">
+                <input id="search-form" type="text" name="search" placeholder="Search by keyword">
+                <button id="get-item-button" type="submit">Search Item</button>
+                <p id="get-item-text"></p>
+           </form>
+        </section>
+
+        <!-- Display Items -->
+        <p id="delete-edit-item-text"></p>
+        <section id="display-item-table-div">
             <table id="display-item-table">
                 <thead>
                     <tr>
-                        <td>Name</td>
-                        <td>Category</td>
-                        <td>Specification</td>
-                        <td>Unit</td>
-                        <td>Amount</td>
+                        <th>Name</th>
+                        <th>Category</th>
+                        <th>Specification</th>
+                        <th>Unit</th>
+                        <th>Amount</th>
+                        <th>Edit</th>
+                        <th>Delete</th>
                     </tr>
                 </thead>
                 <tbody>
-
+                    <!-- Rows dynamically generated by JS -->
                 </tbody>
             </table>
-        </div>
-        </div>
-    </body>
+        </section>
+    </div>
+</body>
 </html>
