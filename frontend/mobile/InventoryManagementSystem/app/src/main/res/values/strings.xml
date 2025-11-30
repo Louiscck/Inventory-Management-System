@@ -1,0 +1,6 @@
+<resources>
+    <string name="app_name">Inventory Management System</string>
+    <string name="server_status_wakeup">Waking up server, please wait...</string>
+    <string name="server_status_live">Server is live.</string>
+    <string name="server_status_error">Error connecting to server.</string>
+</resources>
